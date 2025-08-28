@@ -1,0 +1,11 @@
+# Node.js dependencies
+cw1server/node_modules/
+cw1client/node_modules/
+
+# Environment variables
+server/.env
+client/.env
+
+# Logs
+*.log
+logs/
