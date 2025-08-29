@@ -1,6 +1,8 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const connectDB = require('./config/db');
+const path = require('path');
+const cors = require("cors");
 
 // Load environment variables
 dotenv.config();
@@ -12,15 +14,31 @@ const app = express();
 
 // Middleware to parse JSON
 app.use(express.json());
+// ✅ Allow requests from frontend
+app.use(cors({
+  origin: "http://localhost:5173", // your Vite frontend
+  credentials: true,               // if using cookies/auth
+}));
+// =========================
+// Routes
+// =========================
+const authRoutes = require('./routes/authRoutes');
+app.use('/api/auth', authRoutes);
 
-// Simple test route
+// =========================
+// Static folder for profile images
+// =========================
+app.use('/uploads/profile', express.static(path.join(__dirname, '/uploads/profile')));
+
+// Test Route
 app.get('/', (req, res) => {
   res.send('API is running...');
 });
 
-// Use PORT from .env or fallback to 5000
+// =========================
+// Server Start
+// =========================
 const PORT = process.env.PORT || 5000;
-
 app.listen(PORT, () => {
-  console.log(`Server running on port number : ${PORT}`);
+  console.log(`✅ Server running on http://localhost:${PORT}`);
 });
