@@ -15,10 +15,12 @@ const app = express();
 // Middleware to parse JSON
 app.use(express.json());
 // ✅ Allow requests from frontend
+// ✅ Allow requests from frontend
 app.use(cors({
-  origin: "http://localhost:5173", // your Vite frontend
+  origin: process.env.CLIENT_URL,  // read from .env
   credentials: true,               // if using cookies/auth
 }));
+;
 // =========================
 // Routes
 // =========================
