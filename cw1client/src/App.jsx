@@ -1,14 +1,16 @@
+import React from "react";
 import { Routes, Route } from "react-router-dom";
-import Login from "../src/component/Login";
-import AdminDashboard from "../src/pages/admin/AdminDashboard";
-// add more dashboards as needed
+import Login from "./component/Login";
+import AdminRoutes from "./routes/AdminRoutes";
 
 export default function App() {
   return (
     <Routes>
+      {/* Public route */}
       <Route path="/" element={<Login />} />
-      <Route path="/admindashboard" element={<AdminDashboard />} />
-      {/* Add routes for other roles */}
+
+      {/* Admin routes */}
+      <Route path="/*" element={<AdminRoutes />} />
     </Routes>
   );
 }

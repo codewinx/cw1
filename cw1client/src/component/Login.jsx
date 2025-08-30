@@ -15,12 +15,15 @@ export default function Login() {
       const { role } = data; // role comes from backend response
 
       if (role === "admin") {
-        navigate("/admindashboard");
+        navigate("/admin/dashboard");
       } else if (role === "tailor") {
-        navigate("/tailordashboard");
+        navigate("/tailor/dashboard");
       } else if (role === "manager") {
-        navigate("/managerdashboard");
-      } else {
+        navigate("/manager/dashboard");
+      }else if (role === "cutter") {
+        navigate("/cutter/dashboard");
+      } 
+      else {
         navigate("/");
       }
     } catch (error) {

@@ -3,11 +3,11 @@ const mongoose = require("mongoose");
 
 const orderSchema = new mongoose.Schema(
   {
-orderNo: {
-  type: Number,
-  required: true,
-  unique: true
-},
+    orderNo: {
+      type: Number,
+      required: true,
+      unique: true,
+    },
 
     customer: { type: mongoose.Schema.Types.ObjectId, ref: "Customer", required: true },
     category: { type: String, required: true },
@@ -31,11 +31,45 @@ orderNo: {
       default: "cash",
     },
 
-    // Workflow
+    // Workflow current status
     status: {
       type: String,
-      enum: ["placed", "cutting", "handworking", "tailoring", "finishing", "qualifying", "completed"],
+      enum: [
+        "placed",
+        "cutting",
+        "handworking",
+        "tailoring",
+        "finishing",
+        "qualifying",
+        "completed",
+      ],
       default: "placed",
+    },
+
+    // Stage-specific updates (who + when)
+    cuttingStage: {
+      updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      updatedAt: Date,
+    },
+    handworkStage: {
+      updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      updatedAt: Date,
+    },
+    tailoringStage: {
+      updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      updatedAt: Date,
+    },
+    finishingStage: {
+      updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      updatedAt: Date,
+    },
+    qualifyingStage: {
+      updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      updatedAt: Date,
+    },
+    completedStage: {
+      updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      updatedAt: Date,
     },
 
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },

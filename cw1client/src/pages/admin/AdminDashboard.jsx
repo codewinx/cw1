@@ -2,8 +2,8 @@ import React from 'react'
 
 const AdminDashboard = () => {
   return (
-    <div>
-      df
+    <div className='flex justify-center items-center h-screen'>
+      dashboard page
     </div>
   )
 }
