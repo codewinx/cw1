@@ -20,7 +20,7 @@ export default function Login() {
         navigate("/tailor/dashboard");
       } else if (role === "manager") {
         navigate("/manager/dashboard");
-      }else if (role === "cutter") {
+      }else if (role === "Cutter") {
         navigate("/cutter/dashboard");
       } 
       else {
