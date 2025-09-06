@@ -2,7 +2,6 @@ import React from "react";
 import { Routes, Route } from "react-router-dom";
 import Login from "./component/Login";
 import AdminRoutes from "./routes/AdminRoutes";
-import TailorRoutes from "./routes/TailorRoutes";
 
 export default function App() {
   return (
@@ -12,9 +11,6 @@ export default function App() {
 
       {/* Admin routes */}
       <Route path="/*" element={<AdminRoutes />} />
-
-      {/* Tailor routes */}
-      <Route path="/tailor/*" element={<TailorRoutes />} />
     </Routes>
   );
 }
