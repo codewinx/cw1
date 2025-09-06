@@ -1,56 +1,56 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
 
 const {
-  registerUser,
-  loginUser,
-  getAllUsers,
-  updateUser,
-  deleteUser
-} = require('../controllers/authController');
+  registerStaff,
+  loginStaff,
+  getAllStaff,
+  updateStaff,
+  deleteStaff,
+} = require("../controllers/authController");
 
-const { protect, authorize } = require('../middleware/authMiddleware');
-const { uploadProfileImage } = require('../middleware/upload');
+const { protect, authorize } = require("../middleware/authMiddleware");
+const { uploadProfileImage } = require("../middleware/upload");
 
 // =============================
-// Auth Routes
+// Auth Routes for Staff
 // =============================
 
 // 🔑 Login (Admin + Staff)
-router.post('/login', loginUser);
+router.post("/login", loginStaff);
 
-// 🆕 Register user (Admin only, with profile image upload)
+// 🆕 Register staff (Admin only, with profile image upload)
 router.post(
-  '/register',
+  "/register",
   protect,
-  authorize('admin'),
+  authorize("admin"),
   (req, res, next) => {
     uploadProfileImage(req, res, function (err) {
       if (err) return res.status(400).json({ message: err.message });
       next();
     });
   },
-  registerUser
+  registerStaff
 );
 
-// 📋 Get all users (Admin only)
-router.get('/users', protect, authorize('admin'), getAllUsers);
+// 📋 Get all staff (Admin only)
+router.get("/staff", protect, authorize("admin"), getAllStaff);
 
-// ✏️ Update user (Admin only, with profile image upload)
+// ✏️ Update staff (Admin only, with profile image upload)
 router.put(
-  '/users/:id',
+  "/staff/:id",
   protect,
-  authorize('admin'),
+  authorize("admin"),
   (req, res, next) => {
     uploadProfileImage(req, res, function (err) {
       if (err) return res.status(400).json({ message: err.message });
       next();
     });
   },
-  updateUser
+  updateStaff
 );
 
-// ❌ Delete user (Admin only)
-router.delete('/users/:id', protect, authorize('admin'), deleteUser);
+// ❌ Delete staff (Admin only)
+router.delete("/staff/:id", protect, authorize("admin"), deleteStaff);
 
 module.exports = router;

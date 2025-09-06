@@ -28,11 +28,15 @@ const authRoutes = require('./routes/authRoutes');
 const customerRoutes = require('./routes/customerRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const measurementRoutes = require('./routes/measurementRoutes');
+const staffRoutes = require("./routes/stafRoutes");
+
 // Admin or Manager can add customer
 app.use('/api/customer', customerRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/order', orderRoutes);
 app.use('/api/measurement', measurementRoutes);
+app.use("/api/staff", staffRoutes);
+
 // =========================
 // Static folder for profile images
 // =========================

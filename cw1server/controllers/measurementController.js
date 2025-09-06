@@ -1,22 +1,33 @@
 const Measurement = require("../models/Measurement");
 
-// 📌 Create Measurement
+// @desc    Get all measurement profiles for a specific customer
+// @route   GET /api/measurement/customer/:customerId
+// @access  Private (Admin/Staff)
+exports.getMeasurementsByCustomerId = async (req, res) => {
+  try {
+    const measurements = await Measurement.find({ customer: req.params.customerId });
+    res.status(200).json(measurements);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// @desc    Create a new measurement profile
+// @route   POST /api/measurement
+// @access  Private (Admin/Staff)
 exports.createMeasurement = async (req, res) => {
   try {
-    const { customer, order, category, data } = req.body;
-
-    if (!customer || !category) {
-      return res
-        .status(400)
-        .json({ message: "Customer and category are required" });
+    const { customerId, category, data } = req.body;
+    
+    if (!customerId || !category || !data || data.length === 0) {
+      return res.status(400).json({ message: "Customer ID, category, and data are required." });
     }
 
     const newMeasurement = new Measurement({
-      customer,
-      order: order || null, // optional
+      customer: customerId,
       category,
       data,
-      createdBy: req.user._id, // from auth middleware
+      createdBy: req.Staff._id, // Assuming req.Staff._id is set by auth middleware
     });
 
     await newMeasurement.save();
@@ -31,84 +42,34 @@ exports.createMeasurement = async (req, res) => {
   }
 };
 
-// 📌 Get All Measurements (with optional filter by customer/order)
-exports.getMeasurements = async (req, res) => {
-  try {
-    const { customer, order } = req.query;
-
-    const filter = {};
-    if (customer) filter.customer = customer;
-    if (order) filter.order = order;
-
-    const measurements = await Measurement.find(filter)
-      .populate("customer", "name email mobile")
-      .populate("order", "orderNo category service totalAmount")
-      .populate("createdBy", "username email");
-
-    res.status(200).json({ measurements });
-  } catch (error) {
-    console.error("Error fetching measurements:", error);
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
-};
-
-// 📌 Get Single Measurement by ID
-exports.getMeasurementById = async (req, res) => {
-  try {
-    const measurement = await Measurement.findById(req.params.id)
-      .populate("customer", "name email mobile")
-      .populate("order", "orderNo category service totalAmount")
-      .populate("createdBy", "username email");
-
-    if (!measurement) {
-      return res.status(404).json({ message: "Measurement not found" });
-    }
-
-    res.status(200).json({ measurement });
-  } catch (error) {
-    console.error("Error fetching measurement:", error);
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
-};
-
-// 📌 Update Measurement
+// @desc    Update an existing measurement profile
+// @route   PUT /api/measurement/:id
+// @access  Private (Admin/Staff)
 exports.updateMeasurement = async (req, res) => {
   try {
-    const { category, data, order } = req.body;
+    const { data } = req.body;
+    const { id } = req.params;
+
+    if (!data || data.length === 0) {
+      return res.status(400).json({ message: "Measurement data is required." });
+    }
 
     const updatedMeasurement = await Measurement.findByIdAndUpdate(
-      req.params.id,
-      { category, data, order },
-      { new: true }
+      id,
+      { data },
+      { new: true, runValidators: true }
     );
 
     if (!updatedMeasurement) {
-      return res.status(404).json({ message: "Measurement not found" });
+      return res.status(404).json({ message: "Measurement not found." });
     }
 
-    res
-      .status(200)
-      .json({ message: "Measurement updated", measurement: updatedMeasurement });
+    res.status(200).json({
+      message: "Measurement updated successfully",
+      measurement: updatedMeasurement,
+    });
   } catch (error) {
     console.error("Error updating measurement:", error);
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
-};
-
-// 📌 Delete Measurement
-exports.deleteMeasurement = async (req, res) => {
-  try {
-    const deletedMeasurement = await Measurement.findByIdAndDelete(
-      req.params.id
-    );
-
-    if (!deletedMeasurement) {
-      return res.status(404).json({ message: "Measurement not found" });
-    }
-
-    res.status(200).json({ message: "Measurement deleted successfully" });
-  } catch (error) {
-    console.error("Error deleting measurement:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };

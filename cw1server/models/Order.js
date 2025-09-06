@@ -48,31 +48,31 @@ const orderSchema = new mongoose.Schema(
 
     // Stage-specific updates (who + when)
     cuttingStage: {
-      updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Staff" },
       updatedAt: Date,
     },
     handworkStage: {
-      updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Staff" },
       updatedAt: Date,
     },
     tailoringStage: {
-      updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Staff" },
       updatedAt: Date,
     },
     finishingStage: {
-      updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Staff" },
       updatedAt: Date,
     },
     qualifyingStage: {
-      updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Staff" },
       updatedAt: Date,
     },
     completedStage: {
-      updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Staff" },
       updatedAt: Date,
     },
 
-    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "Staff" },
   },
   { timestamps: true }
 );

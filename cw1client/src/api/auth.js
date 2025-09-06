@@ -4,7 +4,7 @@ import api from "./axios";
 // User Login
 export const userLogin = async (username, password) => {
   try {
-    const res = await api.post("/auth/login", { username, password });
+    const res = await api.post("/api/auth/login", { username, password });
 
     if (res.data.token) {
       localStorage.setItem("token", res.data.token); // Save token
@@ -19,7 +19,7 @@ export const userLogin = async (username, password) => {
 
 // Get Admin Profile
 export const getAdminProfile = async () => {
-  const res = await api.get("/auth/profile");
+  const res = await api.get("/api/auth/profile");
   return res.data;
 };
 

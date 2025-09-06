@@ -1,15 +1,18 @@
 import axios from "axios";
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL, // ✅ use from .env
+  baseURL: import.meta.env.VITE_API_URL, // ✅ Vite way
+  headers: {
+    "Content-Type": "application/json",
+  },
 });
 
-// Attach token from localStorage before every request
-api.interceptors.request.use((req) => {
+api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
   if (token) {
-    req.headers.Authorization = `Bearer ${token}`;
+    config.headers.Authorization = `Bearer ${token}`;
   }
-  return req;
+  return config;
 });
 
 export default api;

@@ -3,19 +3,19 @@ const router = express.Router();
 const measurementController = require("../controllers/measurementController");
 const { protect, authorize } = require("../middleware/authMiddleware");
 
-// Create Measurement
-router.post("/add",  protect, authorize("admin"),measurementController.createMeasurement);
+// @desc    Create a new measurement profile
+// @route   POST /api/measurement
+// @access  Private (Admin/Staff)
+router.post("/", protect, authorize("admin"), measurementController.createMeasurement);
 
-// // Get All Measurements (filter by customer/order optional)
-// router.get("/",  protect, authorize("admin"), measurementController.getMeasurements);
+// @desc    Get all measurement profiles for a specific customer
+// @route   GET /api/measurement/customer/:customerId
+// @access  Private (Admin/Staff)
+router.get("/customer/:customerId", protect, authorize("admin"), measurementController.getMeasurementsByCustomerId);
 
-// // Get Single Measurement
-// router.get("/:id", protect("  admin"), measurementController.getMeasurementById);
-
-// // Update Measurement
-// router.put("/:id",  protect, authorize("admin"), measurementController.updateMeasurement);
-
-// // Delete Measurement
-// router.delete("/:id",  protect, authorize("admin"), measurementController.deleteMeasurement);
+// @desc    Update an existing measurement profile
+// @route   PUT /api/measurement/:id
+// @access  Private (Admin/Staff)
+router.put("/:id", protect, authorize("admin"), measurementController.updateMeasurement);
 
 module.exports = router;

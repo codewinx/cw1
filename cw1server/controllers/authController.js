@@ -1,67 +1,79 @@
-const User = require('../models/User');
-const generateToken = require('../utils/generateToken');
+const bcrypt = require("bcryptjs");
+const Staff = require("../models/Staff");
+const generateToken = require("../utils/generateToken");
 
 // =============================
-// @desc    Register new user (Admin Only)
+// @desc    Register new staff (Admin Only)
 // =============================
-const registerUser = async (req, res) => {
+const registerStaff = async (req, res) => {
   try {
     const {
       username,
       password,
       name,
       email,
-      phone,
+      mobile,
       address,
       role,
       starRating,
       profileImage,
       certified,
-      experience
+      experience,
+      gender,
+      salary,
     } = req.body;
 
-    // ❌ Prevent creating another admin
-    if (role === 'admin') {
-      return res.status(400).json({ message: "Admin can only be created manually in DB" });
-    }
-
-    // Check if user already exists (username/email/phone)
-    const userExists = await User.findOne({
-      $or: [{ username }, { email }, { phone }]
+    // Check if staff already exists (username/email/mobile)
+    const staffExists = await Staff.findOne({
+      $or: [{ username }, { email }, { mobile }],
     });
-    if (userExists) {
-      return res.status(400).json({ message: "User with same username/email/phone already exists" });
+
+    if (staffExists) {
+      return res
+        .status(400)
+        .json({ message: "Staff with same username/email/mobile already exists" });
     }
 
-    // Create user
-    const user = await User.create({
+    // Hash password if provided
+    let hashedPassword = "";
+    if (password) {
+      const salt = await bcrypt.genSalt(10);
+      hashedPassword = await bcrypt.hash(password, salt);
+    }
+
+    // Create staff
+    const staff = await Staff.create({
       username,
-      password,
+      password: hashedPassword,
       name,
       email,
-      phone,
+      mobile,
       address,
       role,
+      gender,
+      salary,
       starRating,
       profileImage,
-      createdBy: req.user._id, // admin who created
+      createdBy: req.staff?._id || null, // admin who created
       certified,
-      experience
+      experience,
     });
 
     res.status(201).json({
-      _id: user._id,
-      username: user.username,
-      role: user.role,
-      name: user.name,
-      email: user.email,
-      phone: user.phone,
-      address: user.address,
-      starRating: user.starRating,
-      profileImage: user.profileImage,
-      certified: user.certified,
-      experience: user.experience,
-      createdAt: user.createdAt
+      _id: staff._id,
+      username: staff.username,
+      role: staff.role,
+      name: staff.name,
+      email: staff.email,
+      mobile: staff.mobile,
+      address: staff.address,
+      gender: staff.gender,
+      salary: staff.salary,
+      starRating: staff.starRating,
+      profileImage: staff.profileImage,
+      certified: staff.certified,
+      experience: staff.experience,
+      createdAt: staff.createdAt,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -69,115 +81,118 @@ const registerUser = async (req, res) => {
 };
 
 // =============================
-// @desc    Login user (Admin + Users)
+// @desc    Login staff (Admin + Staff)
 // =============================
-const loginUser = async (req, res) => {
+const loginStaff = async (req, res) => {
   try {
     const { username, password } = req.body;
 
-    const user = await User.findOne({ username });
-    if (user && (await user.matchPassword(password))) {
-      res.json({
-        _id: user._id,
-        username: user.username,
-        role: user.role,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        address: user.address,
-        starRating: user.starRating,
-        profileImage: user.profileImage,
-        certified: user.certified,
-        experience: user.experience,
-        createdAt: user.createdAt,
-        token: generateToken(user._id)
-      });
-    } else {
-      res.status(401).json({ message: "Invalid username or password" });
+    const staff = await Staff.findOne({ username });
+
+    if (staff && staff.password) {
+      const isMatch = await bcrypt.compare(password, staff.password);
+
+      if (isMatch) {
+        return res.json({
+          _id: staff._id,
+          username: staff.username,
+          role: staff.role,
+          name: staff.name,
+          email: staff.email,
+          mobile: staff.mobile,
+          address: staff.address,
+          gender: staff.gender,
+          salary: staff.salary,
+          starRating: staff.starRating,
+          profileImage: staff.profileImage,
+          certified: staff.certified,
+          experience: staff.experience,
+          createdAt: staff.createdAt,
+          token: generateToken(staff._id),
+        });
+      }
     }
+
+    res.status(401).json({ message: "Invalid username or password" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
 // =============================
-// @desc    Get all users (Admin only)
+// @desc    Get all staff (Admin only)
 // =============================
-const getAllUsers = async (req, res) => {
+const getAllStaff = async (req, res) => {
   try {
-    const users = await User.find({ role: { $ne: 'admin' } }).select("-password"); // exclude admin
-    res.json(users);
+    const staffList = await Staff.find().select("-password");
+    res.json(staffList);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
 // =============================
-// @desc    Update user (Admin only)
+// @desc    Update staff (Admin only)
 // =============================
-const updateUser = async (req, res) => {
+const updateStaff = async (req, res) => {
   try {
     const {
       name,
       email,
-      phone,
+      mobile,
       address,
       role,
+      gender,
+      salary,
       starRating,
       profileImage,
       certified,
-      experience
+      experience,
     } = req.body;
 
-    // ❌ Prevent updating role to admin
-    if (role === 'admin') {
-      return res.status(400).json({ message: "Cannot assign Admin role" });
-    }
+    const staff = await Staff.findById(req.params.id);
+    if (!staff) return res.status(404).json({ message: "Staff not found" });
 
-    const user = await User.findById(req.params.id);
-    if (!user) return res.status(404).json({ message: "User not found" });
+    staff.name = name || staff.name;
+    staff.email = email || staff.email;
+    staff.mobile = mobile || staff.mobile;
+    staff.address = address || staff.address;
+    staff.role = role || staff.role;
+    staff.gender = gender || staff.gender;
+    staff.salary = salary ?? staff.salary;
+    staff.starRating = starRating ?? staff.starRating;
+    staff.profileImage = profileImage || staff.profileImage;
+    staff.certified = certified ?? staff.certified;
+    staff.experience = experience ?? staff.experience;
 
-    user.name = name || user.name;
-    user.email = email || user.email;
-    user.phone = phone || user.phone;
-    user.address = address || user.address;
-    user.role = role || user.role;
-    user.starRating = starRating ?? user.starRating;
-    user.profileImage = profileImage || user.profileImage;
-    user.certified = certified ?? user.certified;
-    user.experience = experience ?? user.experience;
+    await staff.save();
 
-    await user.save();
-
-    res.json({ message: "User updated successfully", user });
+    res.json({ message: "Staff updated successfully", staff });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
 // =============================
-// @desc    Delete user (Admin only)
+// @desc    Delete staff (Admin only)
 // =============================
-const deleteUser = async (req, res) => {
+const deleteStaff = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id);
+    const staff = await Staff.findById(req.params.id);
 
-    if (!user) return res.status(404).json({ message: "User not found" });
-    if (user.role === 'admin') {
-      return res.status(400).json({ message: "Cannot delete Admin" });
-    }
+    if (!staff) return res.status(404).json({ message: "Staff not found" });
 
-    await user.deleteOne();
-    res.json({ message: "User removed successfully" });
+    await staff.deleteOne();
+    res.json({ message: "Staff removed successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
 module.exports = {
-  registerUser,
-  loginUser,
-  getAllUsers,
-  updateUser,
-  deleteUser
+  registerStaff,
+  loginStaff,
+  getAllStaff,
+  updateStaff,
+  deleteStaff,
 };
