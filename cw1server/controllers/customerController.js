@@ -5,8 +5,7 @@ const Measurement = require("../models/Measurement"); // Import the Measurement 
 const Order = require("../models/Order");
 exports.createCustomer = async (req, res) => {
   try {
-    // Destructure `measurements` from the request body
-    const { name, email, phone, address, gender, measurements } = req.body;
+    const { name, email, phone, address, gender, measurements, category } = req.body;
 
     if (!name || !phone) {
       return res.status(400).json({ message: "Name and phone are required" });
@@ -18,17 +17,16 @@ exports.createCustomer = async (req, res) => {
       phone,
       address,
       gender,
-      createdBy: req.user._id, // comes from protect middleware
+      createdBy: req.user._id,
     });
 
     await newCustomer.save();
 
-    // Check if measurements were provided
     if (measurements && measurements.length > 0) {
       const newMeasurement = new Measurement({
-        customer: newCustomer._id, // Link to the new customer
-        category: "General", // or a specific default category
-        data: measurements, // The array of key-value pairs
+        customer: newCustomer._id,
+        category: category || "General",
+        data: measurements,
         createdBy: req.user._id,
       });
       await newMeasurement.save();
@@ -43,6 +41,7 @@ exports.createCustomer = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
 // Search customers by name or ID
 exports.searchCustomers = async (req, res) => {
   try {

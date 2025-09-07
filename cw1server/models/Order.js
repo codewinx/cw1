@@ -33,18 +33,21 @@ const orderSchema = new mongoose.Schema(
 
     // Workflow current status
     status: {
-      type: String,
-      enum: [
-        "placed",
-        "cutting",
-        "handworking",
-        "tailoring",
-        "finishing",
-        "qualifying",
-        "completed",
-      ],
-      default: "placed",
-    },
+  type: String,
+  enum: [
+    "placed",
+    "cutting",
+    "handworking",
+    "tailoring",
+    "finishing",
+    "qualifying",
+    "completed",
+  ],
+  default: "placed",
+},
+tasks: [{ type: mongoose.Schema.Types.ObjectId, ref: "Task" }],
+measurement:[{type: mongoose.Schema.Types.ObjectId, ref: "Measurement"}],
+
 
     // Stage-specific updates (who + when)
     cuttingStage: {
