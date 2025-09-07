@@ -30,9 +30,9 @@ const AdminAddOrder = () => {
   const [newMeasurementData, setNewMeasurementData] = useState([
     { key: "", value: "" },
   ]);
+  const [newMeasurementCategory, setNewMeasurementCategory] = useState("");
   const [isEditingMeasurement, setIsEditingMeasurement] = useState(false);
   const [editedMeasurementData, setEditedMeasurementData] = useState([]);
-  const [newMeasurementCategory, setNewMeasurementCategory] = useState("");
 
   const [message, setMessage] = useState("");
   const [isSuccess, setIsSuccess] = useState(true);
@@ -86,49 +86,12 @@ const AdminAddOrder = () => {
     }
   }, [selectedMeasurement, customerMeasurements]);
 
-  // Handle input changes for main form data
+  // Handle input changes
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Handle new measurement data changes
-  const handleNewMeasurementChange = (index, e) => {
-    const newMeasurements = [...newMeasurementData];
-    newMeasurements[index][e.target.name] = e.target.value;
-    setNewMeasurementData(newMeasurements);
-  };
-
-  const addMeasurementRow = () => {
-    setNewMeasurementData([...newMeasurementData, { key: "", value: "" }]);
-  };
-
-  const removeMeasurementRow = (index) => {
-    const newMeasurements = newMeasurementData.filter((_, i) => i !== index);
-    setNewMeasurementData(newMeasurements);
-  };
-
-  // Handle editing measurement data changes
-  const handleEditedMeasurementChange = (index, e) => {
-    const updatedMeasurements = [...editedMeasurementData];
-    updatedMeasurements[index][e.target.name] = e.target.value;
-    setEditedMeasurementData(updatedMeasurements);
-  };
-
-  const addEditedMeasurementRow = () => {
-    setEditedMeasurementData([
-      ...editedMeasurementData,
-      { key: "", value: "" },
-    ]);
-  };
-
-  const removeEditedMeasurementRow = (index) => {
-    const updatedMeasurements = editedMeasurementData.filter(
-      (_, i) => i !== index
-    );
-    setEditedMeasurementData(updatedMeasurements);
-  };
-
-  // Handle customer search
+  // Customer search
   const handleCustomerSearch = async (e) => {
     const value = e.target.value;
     setFormData({ ...formData, customer: value });
@@ -153,37 +116,35 @@ const AdminAddOrder = () => {
     setSuggestions([]);
   };
 
+  // Measurement changes
   const handleMeasurementChange = (e) => {
     setSelectedMeasurement(e.target.value);
     setIsEditingMeasurement(false);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleNewMeasurementChange = (index, e) => {
+    const newMeasurements = [...newMeasurementData];
+    newMeasurements[index][e.target.name] = e.target.value;
+    setNewMeasurementData(newMeasurements);
+  };
 
+  const handleEditedMeasurementChange = (index, e) => {
+    const updated = [...editedMeasurementData];
+    updated[index][e.target.name] = e.target.value;
+    setEditedMeasurementData(updated);
+  };
+
+  // Save Measurement Separately
+  const handleSaveMeasurement = async () => {
     if (!selectedCustomer) {
-      setMessage("Please select a customer.");
+      setMessage("Please select a customer first.");
       setIsSuccess(false);
       return;
     }
-
-    if (
-      customerMeasurements.length > 0 &&
-      !selectedMeasurement &&
-      !isEditingMeasurement
-    ) {
-      setMessage("Please select a measurement profile for this order.");
-      setIsSuccess(false);
-      return;
-    }
-
-    let finalMeasurementId = null;
 
     if (isAddingMeasurement) {
-      const validMeasurements = newMeasurementData.filter(
-        (m) => m.key && m.value
-      );
-      if (validMeasurements.length === 0) {
+      const validMeasurements = newMeasurementData.filter((m) => m.key && m.value);
+      if (validMeasurements.length === 0 || !newMeasurementCategory) {
         setMessage("Please fill in the new measurement details.");
         setIsSuccess(false);
         return;
@@ -195,21 +156,19 @@ const AdminAddOrder = () => {
           newMeasurementCategory,
           validMeasurements
         );
-        finalMeasurementId = newMeasurement.measurement._id;
-        setMessage("New measurement added successfully!");
+        setMessage("New measurement saved successfully!");
         setIsSuccess(true);
         setIsAddingMeasurement(false);
+
+        const updatedList = await getMeasurementsByCustomerId(selectedCustomer._id);
+        setCustomerMeasurements(updatedList);
+        setSelectedMeasurement(newMeasurement.measurement._id);
       } catch (err) {
-        setMessage(
-          err.message || "Error adding new measurement. Please try again."
-        );
+        setMessage(err.message || "Error saving measurement.");
         setIsSuccess(false);
-        return;
       }
     } else if (isEditingMeasurement) {
-      const validMeasurements = editedMeasurementData.filter(
-        (m) => m.key && m.value
-      );
+      const validMeasurements = editedMeasurementData.filter((m) => m.key && m.value);
       if (validMeasurements.length === 0) {
         setMessage("Edited measurement cannot be empty.");
         setIsSuccess(false);
@@ -218,33 +177,41 @@ const AdminAddOrder = () => {
 
       try {
         await updateMeasurement(selectedMeasurement, validMeasurements);
-        finalMeasurementId = selectedMeasurement;
         setMessage("Measurement updated successfully!");
         setIsSuccess(true);
         setIsEditingMeasurement(false);
+
+        const updatedList = await getMeasurementsByCustomerId(selectedCustomer._id);
+        setCustomerMeasurements(updatedList);
       } catch (err) {
-        setMessage(
-          err.message || "Error updating measurement. Please try again."
-        );
+        setMessage(err.message || "Error updating measurement.");
         setIsSuccess(false);
-        return;
       }
-    } else {
-      finalMeasurementId = selectedMeasurement;
+    }
+  };
+
+  // Save Order Only
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!selectedCustomer) {
+      setMessage("Please select a customer.");
+      setIsSuccess(false);
+      return;
     }
 
-    try {
-      const dataToSend = {
-        ...formData,
-        customer: selectedCustomer._id,
-        measurementId: finalMeasurementId,
-      };
+    const dataToSend = {
+      ...formData,
+      customer: selectedCustomer._id,
+      measurementId: selectedMeasurement || null,
+    };
 
+    try {
       const data = await createOrder(dataToSend);
       setMessage(data.message || "Order added successfully!");
       setIsSuccess(true);
 
-      // Reset form
+      // Reset
       setFormData({
         customer: "",
         category: "",
@@ -312,80 +279,20 @@ const AdminAddOrder = () => {
         </div>
 
         {/* Other fields */}
-        <input
-          type="text"
-          name="category"
-          value={formData.category}
-          placeholder="Category"
-          onChange={handleChange}
-          className="w-full border p-2 rounded"
-          required
-        />
-        <input
-          type="text"
-          name="service"
-          value={formData.service}
-          placeholder="Service"
-          onChange={handleChange}
-          className="w-full border p-2 rounded"
-          required
-        />
-        <input
-          type="text"
-          name="design"
-          value={formData.design}
-          placeholder="Design"
-          onChange={handleChange}
-          className="w-full border p-2 rounded"
-        />
-        <input
-          type="text"
-          name="rawMaterial"
-          value={formData.rawMaterial}
-          placeholder="Raw Material"
-          onChange={handleChange}
-          className="w-full border p-2 rounded"
-        />
-        <input
-          type="date"
-          name="expectedDate"
-          value={formData.expectedDate}
-          onChange={handleChange}
-          className="w-full border p-2 rounded"
-        />
+        <input type="text" name="category" value={formData.category} placeholder="Category" onChange={handleChange} className="w-full border p-2 rounded" required />
+        <input type="text" name="service" value={formData.service} placeholder="Service" onChange={handleChange} className="w-full border p-2 rounded" required />
+        <input type="text" name="design" value={formData.design} placeholder="Design" onChange={handleChange} className="w-full border p-2 rounded" />
+        <input type="text" name="rawMaterial" value={formData.rawMaterial} placeholder="Raw Material" onChange={handleChange} className="w-full border p-2 rounded" />
+        <input type="date" name="expectedDate" value={formData.expectedDate} onChange={handleChange} className="w-full border p-2 rounded" />
+
+        {/* Money */}
         <div className="grid grid-cols-3 gap-3">
-          <input
-            type="number"
-            name="totalAmount"
-            value={formData.totalAmount}
-            placeholder="Total"
-            onChange={handleChange}
-            className="border p-2 rounded"
-            required
-          />
-          <input
-            type="number"
-            name="advanceAmount"
-            value={formData.advanceAmount}
-            placeholder="Advance"
-            onChange={handleChange}
-            className="border p-2 rounded"
-          />
-          <input
-            type="number"
-            name="extraCharges"
-            value={formData.extraCharges}
-            placeholder="Extra"
-            onChange={handleChange}
-            className="border p-2 rounded"
-          />
+          <input type="number" name="totalAmount" value={formData.totalAmount} placeholder="Total" onChange={handleChange} className="border p-2 rounded" required />
+          <input type="number" name="advanceAmount" value={formData.advanceAmount} placeholder="Advance" onChange={handleChange} className="border p-2 rounded" />
+          <input type="number" name="extraCharges" value={formData.extraCharges} placeholder="Extra" onChange={handleChange} className="border p-2 rounded" />
         </div>
-        <select
-          name="paymentMethod"
-          value={formData.paymentMethod}
-          onChange={handleChange}
-          className="w-full border p-2 rounded"
-        >
+
+        <select name="paymentMethod" value={formData.paymentMethod} onChange={handleChange} className="w-full border p-2 rounded">
           <option value="">Select Payment Method</option>
           <option value="cash">Cash</option>
           <option value="card">Card</option>
@@ -396,9 +303,7 @@ const AdminAddOrder = () => {
         {selectedCustomer && !isAddingMeasurement && (
           <div className="pt-2">
             <div className="flex justify-between items-center mb-1">
-              <label className="block text-sm font-medium text-gray-700">
-                Select Measurement Profile
-              </label>
+              <label className="block text-sm font-medium text-gray-700">Select Measurement Profile</label>
               {customerMeasurements.length > 0 && (
                 <button
                   type="button"
@@ -412,17 +317,9 @@ const AdminAddOrder = () => {
             </div>
 
             {loading ? (
-              <div className="text-gray-500 text-sm">
-                Loading measurements...
-              </div>
+              <div className="text-gray-500 text-sm">Loading measurements...</div>
             ) : customerMeasurements.length > 0 ? (
-              <select
-                name="measurement"
-                value={selectedMeasurement}
-                onChange={handleMeasurementChange}
-                className="w-full border p-2 rounded"
-                required
-              >
+              <select name="measurement" value={selectedMeasurement} onChange={handleMeasurementChange} className="w-full border p-2 rounded" required>
                 {customerMeasurements.map((m) => (
                   <option key={m._id} value={m._id}>
                     {m.category}
@@ -430,9 +327,7 @@ const AdminAddOrder = () => {
                 ))}
               </select>
             ) : (
-              <div className="p-3 text-sm text-red-700 bg-red-100 rounded">
-                No measurements found for this customer.
-              </div>
+              <div className="p-3 text-sm text-red-700 bg-red-100 rounded">No measurements found for this customer.</div>
             )}
 
             <button
@@ -449,97 +344,36 @@ const AdminAddOrder = () => {
           </div>
         )}
 
-        {/* New Measurement (Horizontal Layout) */}
+        {/* New Measurement */}
         {isAddingMeasurement && (
           <div className="mt-4 p-4 border rounded-lg bg-gray-50">
-            <h3 className="text-md font-semibold mb-3">
-              New Measurement Details
-            </h3>
+            <h3 className="text-md font-semibold mb-3">New Measurement Details</h3>
 
             <div className="flex gap-2 mb-3">
-              <input
-                type="text"
-                value={newMeasurementCategory}
-                onChange={(e) => setNewMeasurementCategory(e.target.value)}
-                placeholder="Category (e.g., Shirt)"
-                className="w-1/3 border p-2 rounded"
-                required
-              />
-              <input
-                type="text"
-                name="key"
-                value={newMeasurementData[0].key}
-                placeholder="e.g., Chest"
-                onChange={(e) => handleNewMeasurementChange(0, e)}
-                className="w-1/3 border p-2 rounded"
-                required
-              />
-              <input
-                type="text"
-                name="value"
-                value={newMeasurementData[0].value}
-                placeholder="e.g., 36 in"
-                onChange={(e) => handleNewMeasurementChange(0, e)}
-                className="w-1/3 border p-2 rounded"
-                required
-              />
+              <input type="text" value={newMeasurementCategory} onChange={(e) => setNewMeasurementCategory(e.target.value)} placeholder="Category (e.g., Shirt)" className="w-1/3 border p-2 rounded" required />
+              <input type="text" name="key" value={newMeasurementData[0].key} placeholder="e.g., Chest" onChange={(e) => handleNewMeasurementChange(0, e)} className="w-1/3 border p-2 rounded" required />
+              <input type="text" name="value" value={newMeasurementData[0].value} placeholder="e.g., 36 in" onChange={(e) => handleNewMeasurementChange(0, e)} className="w-1/3 border p-2 rounded" required />
             </div>
 
             {newMeasurementData.slice(1).map((m, index) => (
               <div key={index} className="flex gap-2 items-center mb-2">
-                <input
-                  type="text"
-                  name="key"
-                  value={m.key}
-                  placeholder="e.g., Length"
-                  onChange={(e) =>
-                    handleNewMeasurementChange(index + 1, e)
-                  }
-                  className="w-1/2 border p-2 rounded"
-                />
-                <input
-                  type="text"
-                  name="value"
-                  value={m.value}
-                  placeholder="e.g., 40 in"
-                  onChange={(e) =>
-                    handleNewMeasurementChange(index + 1, e)
-                  }
-                  className="w-1/2 border p-2 rounded"
-                />
-                <button
-                  type="button"
-                  onClick={() => removeMeasurementRow(index + 1)}
-                  className="text-red-500 p-2"
-                >
-                  X
-                </button>
+                <input type="text" name="key" value={m.key} placeholder="e.g., Length" onChange={(e) => handleNewMeasurementChange(index + 1, e)} className="w-1/2 border p-2 rounded" />
+                <input type="text" name="value" value={m.value} placeholder="e.g., 40 in" onChange={(e) => handleNewMeasurementChange(index + 1, e)} className="w-1/2 border p-2 rounded" />
               </div>
             ))}
 
-            <button
-              type="button"
-              onClick={addMeasurementRow}
-              className="w-full bg-gray-200 text-gray-800 p-2 rounded-lg hover:bg-gray-300"
-            >
-              Add another measurement
+            <button type="button" onClick={handleSaveMeasurement} className="w-full bg-green-600 text-white p-2 rounded-lg hover:bg-green-700 mt-2">
+              Save Measurement
             </button>
 
-            <button
-              type="button"
-              onClick={() => setIsAddingMeasurement(false)}
-              className="mt-2 w-full bg-red-500 text-white p-2 rounded-lg hover:bg-red-600"
-            >
+            <button type="button" onClick={() => setIsAddingMeasurement(false)} className="mt-2 w-full bg-red-500 text-white p-2 rounded-lg hover:bg-red-600">
               Cancel
             </button>
           </div>
         )}
 
-        {/* Save Button */}
-        <button
-          type="submit"
-          className="w-full bg-green-600 text-white p-2 rounded-lg hover:bg-green-700"
-        >
+        {/* Save Order */}
+        <button type="submit" className="w-full bg-green-600 text-white p-2 rounded-lg hover:bg-green-700">
           Save Order
         </button>
       </form>

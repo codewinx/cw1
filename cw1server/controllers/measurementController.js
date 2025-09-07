@@ -18,16 +18,18 @@ exports.getMeasurementsByCustomerId = async (req, res) => {
 exports.createMeasurement = async (req, res) => {
   try {
     const { customerId, category, data } = req.body;
-    
+
     if (!customerId || !category || !data || data.length === 0) {
-      return res.status(400).json({ message: "Customer ID, category, and data are required." });
+      return res
+        .status(400)
+        .json({ message: "Customer ID, category, and data are required." });
     }
 
     const newMeasurement = new Measurement({
       customer: customerId,
       category,
       data,
-      createdBy: req.Staff._id, // Assuming req.Staff._id is set by auth middleware
+      createdBy: req.user._id, // ✅ fixed
     });
 
     await newMeasurement.save();
