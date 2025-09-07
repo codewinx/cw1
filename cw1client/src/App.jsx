@@ -2,6 +2,7 @@ import React from "react";
 import { Routes, Route } from "react-router-dom";
 import Login from "./component/Login";
 import AdminRoutes from "./routes/AdminRoutes";
+import CutterRoutes from "./routes/CutterRoutes";
 
 export default function App() {
   return (
@@ -11,6 +12,10 @@ export default function App() {
 
       {/* Admin routes */}
       <Route path="/*" element={<AdminRoutes />} />
+
+      {/* Cutter routes */}
+      <Route path="/cutter/*" element={<CutterRoutes />} />
+      
     </Routes>
   );
 }

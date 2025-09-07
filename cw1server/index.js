@@ -30,6 +30,7 @@ const orderRoutes = require('./routes/orderRoutes');
 const measurementRoutes = require('./routes/measurementRoutes');
 const staffRoutes = require("./routes/stafRoutes");
 const taskRoutes =require("./routes/taskRoutes")
+const cutterRoutes = require("./routes/cutterRoutes");
 
 // const tailorRoutes = require('./routes/tailorRoutes');
 // Admin or Manager can add customer
@@ -39,6 +40,7 @@ app.use('/api/order', orderRoutes);
 app.use('/api/measurement', measurementRoutes);
 app.use("/api/staff", staffRoutes);
 app.use('/api/task',taskRoutes);
+app.use("/api/cutter", cutterRoutes);
 
 // app.use('/api/tailor', tailorRoutes);
 // =========================
