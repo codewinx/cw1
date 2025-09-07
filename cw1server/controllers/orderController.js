@@ -1,9 +1,11 @@
 // controllers/orderController.js
 const Order = require("../models/Order");
 const Counter = require("../models/Counter");
-const Measurement = require("../models/Measurement"); // Import the Measurement model
+const Measurement = require("../models/Measurement");
 
+// ===============================
 // Create Order
+// ===============================
 exports.createOrder = async (req, res) => {
   try {
     const {
@@ -17,24 +19,26 @@ exports.createOrder = async (req, res) => {
       advanceAmount,
       extraCharges,
       paymentMethod,
-      measurementId, // This is the ID of the selected measurement profile
+      measurementId,
     } = req.body;
 
-    // Basic validation for required order fields
+    // Basic validation
     if (!customer || !category || !service || !totalAmount) {
       return res.status(400).json({
+        success: false,
         message: "Customer, category, service, and totalAmount are required",
       });
     }
 
-    // Backend validation to ensure a measurement profile is provided
+    // Measurement check
     if (!measurementId) {
       return res.status(400).json({
+        success: false,
         message: "A measurement profile must be selected for this order.",
       });
     }
 
-    // Get or create the order counter and increment its value
+    // Generate Order Number
     const counter = await Counter.findOneAndUpdate(
       { name: "orderNo" },
       { $inc: { value: 1 } },
@@ -43,9 +47,10 @@ exports.createOrder = async (req, res) => {
 
     const orderNo = counter.value;
 
-    // Calculate the pending amount based on total, advance, and extra charges
+    // Calculate pending
     const pendingAmount =
-      parseFloat(totalAmount) - (parseFloat(advanceAmount) || 0) + (parseFloat(extraCharges) || 0);
+      (parseFloat(totalAmount) + (parseFloat(extraCharges) || 0)) -
+      (parseFloat(advanceAmount) || 0);
 
     const newOrder = new Order({
       orderNo,
@@ -60,23 +65,30 @@ exports.createOrder = async (req, res) => {
       extraCharges,
       pendingAmount,
       paymentMethod,
-      measurement: measurementId, // Link the measurement profile to the order
-      createdBy: req.user._id, // Assumes req.Staff._id is set by auth middleware
+      measurement: measurementId,
+      createdBy: req.user._id,
     });
 
     await newOrder.save();
 
     res.status(201).json({
+      success: true,
       message: "Order created successfully",
       order: newOrder,
     });
   } catch (error) {
     console.error("Error creating order:", error);
-    res.status(500).json({ message: "Server error", error: error.message });
+    res.status(500).json({
+      success: false,
+      message: "Error creating order",
+      error: error.message,
+    });
   }
 };
 
-// Get all orders (with filters and search)
+// ===============================
+// Get All Orders (with filters)
+// ===============================
 exports.getOrders = async (req, res) => {
   try {
     const { search, status, startDate, endDate } = req.query;
@@ -85,11 +97,9 @@ exports.getOrders = async (req, res) => {
     if (search) {
       filter = {
         $or: [
-          { orderNo: isNaN(search) ? undefined : Number(search) },
+          !isNaN(search) ? { orderNo: Number(search) } : null,
           { category: { $regex: search, $options: "i" } },
           { service: { $regex: search, $options: "i" } },
-          // You can't search by customer name directly here unless you use aggregation
-          // which is more complex. The current approach with populate is fine for display.
         ].filter(Boolean),
       };
     }
@@ -100,45 +110,75 @@ exports.getOrders = async (req, res) => {
 
     if (startDate || endDate) {
       filter.createdAt = {};
-      if (startDate) {
-        // Find orders created on or after the start date
-        filter.createdAt.$gte = new Date(startDate);
-      }
-      if (endDate) {
-        // Find orders created on or before the end date
-        filter.createdAt.$lte = new Date(endDate);
-      }
+      if (startDate) filter.createdAt.$gte = new Date(startDate);
+      if (endDate) filter.createdAt.$lte = new Date(endDate);
     }
 
     const orders = await Order.find(filter)
       .populate("customer", "name phone")
       .populate("createdBy", "name")
+      .populate({
+        path: "tasks",
+        populate: [
+          { path: "assignedTo", select: "name role" },
+          { path: "assignedBy", select: "name role" },
+        ],
+      })
       .sort({ createdAt: -1 })
       .lean();
 
-    res.status(200).json(orders);
+    res.status(200).json({
+      success: true,
+      data: orders,
+    });
   } catch (error) {
-    res.status(500).json({ message: "Error fetching orders", error: error.message });
+    res.status(500).json({
+      success: false,
+      message: "Error fetching orders",
+      error: error.message,
+    });
   }
 };
 
-
-// Get single order
+// ===============================
+// Get Single Order
+// ===============================
 exports.getOrderById = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id)
       .populate("customer", "name phone email")
-      .populate("createdBy", "name");
+      .populate("createdBy", "name")
+      .populate({
+        path: "tasks",
+        populate: [
+          { path: "assignedTo", select: "name role" },
+          { path: "assignedBy", select: "name role" },
+        ],
+      });
 
-    if (!order) return res.status(404).json({ message: "Order not found" });
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
 
-    res.status(200).json(order);
+    res.status(200).json({
+      success: true,
+      data: order,
+    });
   } catch (error) {
-    res.status(500).json({ message: "Error fetching order", error: error.message });
+    res.status(500).json({
+      success: false,
+      message: "Error fetching order",
+      error: error.message,
+    });
   }
 };
 
-// Update order
+// ===============================
+// Update Order
+// ===============================
 exports.updateOrder = async (req, res) => {
   try {
     const order = await Order.findByIdAndUpdate(req.params.id, req.body, {
@@ -146,23 +186,50 @@ exports.updateOrder = async (req, res) => {
       runValidators: true,
     });
 
-    if (!order) return res.status(404).json({ message: "Order not found" });
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
 
-    res.status(200).json(order);
+    res.status(200).json({
+      success: true,
+      message: "Order updated successfully",
+      data: order,
+    });
   } catch (error) {
-    res.status(500).json({ message: "Error updating order", error: error.message });
+    res.status(500).json({
+      success: false,
+      message: "Error updating order",
+      error: error.message,
+    });
   }
 };
 
-// Delete order
+// ===============================
+// Delete Order
+// ===============================
 exports.deleteOrder = async (req, res) => {
   try {
     const order = await Order.findByIdAndDelete(req.params.id);
 
-    if (!order) return res.status(404).json({ message: "Order not found" });
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
 
-    res.status(200).json({ message: "Order deleted successfully" });
+    res.status(200).json({
+      success: true,
+      message: "Order deleted successfully",
+    });
   } catch (error) {
-    res.status(500).json({ message: "Error deleting order", error: error.message });
+    res.status(500).json({
+      success: false,
+      message: "Error deleting order",
+      error: error.message,
+    });
   }
 };

@@ -4,6 +4,7 @@ const Order = require("../models/Order");
 const Staff = require("../models/Staff");
 
 // ✅ Create & Assign a Task
+// controllers/taskController.js
 exports.assignTask = async (req, res) => {
   try {
     const { orderId, staffId, stage, deadline, remarks } = req.body;
@@ -16,27 +17,39 @@ exports.assignTask = async (req, res) => {
     const staff = await Staff.findById(staffId);
     if (!staff) return res.status(404).json({ error: "Staff not found" });
 
-    // create task
-    const task = new Task({
-      order: orderId,
-      assignedTo: staffId,
-      stage,
-      deadline,
-      remarks,
-      assignedBy: req.user ? req.user._id : null, // if Manager is logged in
-    });
+    // check if task already exists for this stage
+    let task = await Task.findOne({ order: orderId, stage });
 
-    await task.save();
+    if (task) {
+      // update existing assignment
+      task.assignedTo = staffId;
+      task.deadline = deadline || task.deadline;
+      task.remarks = remarks || task.remarks;
+      task.assignedBy = req.user ? req.user._id : null;
+      await task.save();
+    } else {
+      // create new task
+      task = new Task({
+        order: orderId,
+        assignedTo: staffId,
+        stage,
+        deadline,
+        remarks,
+        assignedBy: req.user ? req.user._id : null,
+      });
+      await task.save();
 
-    // push into order.tasks array
-    order.tasks.push(task._id);
-    await order.save();
+      // push into order.tasks only if new
+      order.tasks.push(task._id);
+      await order.save();
+    }
 
     res.status(201).json({ message: "Task assigned successfully", task });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
+
 
 // ✅ Get all tasks (Admin/Manager)
 exports.getAllTasks = async (req, res) => {

@@ -13,15 +13,16 @@ const AdminTaskManager = () => {
   const [orders, setOrders] = useState([]);
   const [staff, setStaff] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [selectedWorkers, setSelectedWorkers] = useState({}); // store selected worker for each role
 
   // Fetch orders + staff
   useEffect(() => {
     const fetchData = async () => {
       try {
         const orderData = await getOrders();
-        setOrders(orderData);
+        setOrders(orderData.data || orderData); // handle API shape
         const staffData = await getAllStaff();
-        setStaff(staffData.data);
+        setStaff(staffData.data || []);
       } catch (err) {
         console.error(err);
       }
@@ -29,23 +30,34 @@ const AdminTaskManager = () => {
     fetchData();
   }, []);
 
-  // Assign task
-  const handleAssign = async (role, staffId) => {
+  // Assign task only when Assign button clicked
+  const handleAssign = async (role) => {
+    const staffId = selectedWorkers[role];
+    if (!staffId) {
+      alert("Please select a worker before assigning.");
+      return;
+    }
+
     try {
       await assignTask({
         orderId: selectedOrder._id,
         staffId,
-        stage: role, // stage = role ("Tailor", "Cutter", "Handworker")
+        stage: role, // stage = "Tailor", "Cutter", "Handworker"
       });
       alert(`${role} task assigned successfully ✅`);
 
       // Refresh orders after assigning
       const orderData = await getOrders();
-      setOrders(orderData);
+      setOrders(orderData.data || orderData);
 
       // Update selected order with fresh data
-      const updated = orderData.find((o) => o._id === selectedOrder._id);
+      const updated = (orderData.data || orderData).find(
+        (o) => o._id === selectedOrder._id
+      );
       setSelectedOrder(updated);
+
+      // Reset dropdown selection
+      setSelectedWorkers((prev) => ({ ...prev, [role]: "" }));
     } catch (err) {
       alert(err.response?.data?.error || "Failed to assign task");
     }
@@ -54,16 +66,17 @@ const AdminTaskManager = () => {
   // UI for each role box
   const renderRoleBox = (role, label) => {
     const currentTask = selectedOrder?.tasks?.find((t) => t.stage === role);
-    const assignedStaff = currentTask?.staff?.name || "Not Assigned";
-    const status = currentTask ? "Assigned" : "Pending";
+    const assignedStaff = currentTask?.assignedTo?._id || "";
 
     return (
       <div className="border rounded-lg p-4 w-full md:w-1/3">
         <h3 className="font-semibold mb-2">{label}</h3>
         <select
           className="border p-2 rounded w-full mb-2"
-          value={currentTask?.staff?._id || ""}
-          onChange={(e) => handleAssign(role, e.target.value)}
+          value={selectedWorkers[role] || assignedStaff}
+          onChange={(e) =>
+            setSelectedWorkers((prev) => ({ ...prev, [role]: e.target.value }))
+          }
         >
           <option value="">Select worker...</option>
           {staff
@@ -76,26 +89,17 @@ const AdminTaskManager = () => {
         </select>
         <p
           className={`text-sm mb-2 ${
-            status === "Assigned" ? "text-green-600" : "text-yellow-600"
+            currentTask ? "text-green-600" : "text-yellow-600"
           }`}
         >
-          Status: {status}
+          Status: {currentTask ? "Assigned" : "Pending"}
         </p>
-        {status === "Assigned" ? (
-          <button
-            onClick={() => alert("Re-assign by selecting new worker")}
-            className="px-4 py-2 border rounded bg-gray-100"
-          >
-            Re-Assign
-          </button>
-        ) : (
-          <button
-            onClick={() => alert("Select a worker to assign")}
-            className="px-4 py-2 border rounded bg-blue-100"
-          >
-            Assign
-          </button>
-        )}
+        <button
+          onClick={() => handleAssign(role)}
+          className="px-4 py-2 border rounded bg-blue-100"
+        >
+          {currentTask ? "Re-Assign" : "Assign"}
+        </button>
       </div>
     );
   };
@@ -197,15 +201,15 @@ const AdminTaskManager = () => {
                   <td className="px-4 py-2">{selectedOrder.orderNo}</td>
                   <td className="px-4 py-2">
                     {selectedOrder.tasks?.find((t) => t.stage === "Tailor")
-                      ?.staff?.name || "-"}
+                      ?.assignedTo?.name || "-"}
                   </td>
                   <td className="px-4 py-2">
                     {selectedOrder.tasks?.find((t) => t.stage === "Cutter")
-                      ?.staff?.name || "-"}
+                      ?.assignedTo?.name || "-"}
                   </td>
                   <td className="px-4 py-2">
                     {selectedOrder.tasks?.find((t) => t.stage === "Handworker")
-                      ?.staff?.name || "-"}
+                      ?.assignedTo?.name || "-"}
                   </td>
                   <td className="px-4 py-2">
                     {selectedOrder.tasks?.[0]?.assignedBy?.name || "-"}
