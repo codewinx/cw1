@@ -16,7 +16,7 @@ const CutterSidebar = () => {
   const menuItems = [
     { icon: BarChart3, label: "Dashboard", path: "/cutter/dashboard" },
 
-    { icon: ClipboardList, label: "Assigned Tasks", path: "/cutter/Assigned-Tasks" },
+    { icon: ClipboardList, label: "Tasks", path: "/cutter/CutterTasks" },
      { icon: Clock, label: "Pending Tasks", path: "/cutter/Pending-Tasks" },
       { icon: CheckCircle, label: "Completed Tasks", path: "/cutter/Completed-Tasks" }
     
