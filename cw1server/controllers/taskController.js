@@ -1,55 +1,44 @@
-// controllers/taskController.js
 const Task = require("../models/Task");
 const Order = require("../models/Order");
 const Staff = require("../models/Staff");
 
-// ✅ Create & Assign a Task
-// controllers/taskController.js
+// ✅ Create & Assign (or Re-Assign) Task
 exports.assignTask = async (req, res) => {
   try {
-    const { orderId, staffId, stage, deadline, remarks } = req.body;
+    const { orderId, stage, assignedTo, deadline, remarks } = req.body;
 
-    // check if order exists
-    const order = await Order.findById(orderId);
-    if (!order) return res.status(404).json({ error: "Order not found" });
-
-    // check if staff exists
-    const staff = await Staff.findById(staffId);
-    if (!staff) return res.status(404).json({ error: "Staff not found" });
-
-    // check if task already exists for this stage
-    let task = await Task.findOne({ order: orderId, stage });
-
-    if (task) {
-      // update existing assignment
-      task.assignedTo = staffId;
-      task.deadline = deadline || task.deadline;
-      task.remarks = remarks || task.remarks;
-      task.assignedBy = req.user ? req.user._id : null;
-      await task.save();
-    } else {
-      // create new task
-      task = new Task({
-        order: orderId,
-        assignedTo: staffId,
-        stage,
-        deadline,
-        remarks,
-        assignedBy: req.user ? req.user._id : null,
-      });
-      await task.save();
-
-      // push into order.tasks only if new
-      order.tasks.push(task._id);
-      await order.save();
+    if (!assignedTo) {
+      return res.status(400).json({ message: "Please select a worker before assigning." });
     }
 
-    res.status(201).json({ message: "Task assigned successfully", task });
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    const newTask = await Task.create({
+      order: orderId,
+      stage,
+      assignedTo,
+      assignedBy: req.user._id, // admin assigning
+      deadline,
+      remarks,
+    });
+
+    order.tasks = order.tasks || [];
+    order.tasks.push(newTask._id);
+    await order.save();
+
+    res.status(201).json({
+      success: true,
+      message: "Task assigned successfully",
+      task: newTask,
+    });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Error assigning task:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 };
-
 
 // ✅ Get all tasks (Admin/Manager)
 exports.getAllTasks = async (req, res) => {
@@ -101,6 +90,7 @@ exports.updateTaskStatus = async (req, res) => {
       action: status,
       by: req.user ? req.user._id : null,
       note: remarks,
+      at: new Date(),
     });
 
     await task.save();

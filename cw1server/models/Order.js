@@ -1,4 +1,3 @@
-// models/Order.js
 const mongoose = require("mongoose");
 
 const orderSchema = new mongoose.Schema(
@@ -13,14 +12,16 @@ const orderSchema = new mongoose.Schema(
     category: { type: String, required: true },
     service: { type: String, required: true },
     design: String,
+
     rawMaterial: {
       isProvided: { type: Boolean, default: false },
       name: String,
       price: Number,
     },
+
     expectedDate: Date,
 
-    // Payment
+    // 💰 Payment Details
     totalAmount: { type: Number, required: true },
     advanceAmount: { type: Number, default: 0 },
     pendingAmount: { type: Number, default: 0 },
@@ -31,25 +32,26 @@ const orderSchema = new mongoose.Schema(
       default: "cash",
     },
 
-    // Workflow current status
+    // 📌 Workflow current status
     status: {
-  type: String,
-  enum: [
-    "placed",
-    "cutting",
-    "handworking",
-    "tailoring",
-    "finishing",
-    "qualifying",
-    "completed",
-  ],
-  default: "placed",
-},
-tasks: [{ type: mongoose.Schema.Types.ObjectId, ref: "Task" }],
-measurement:[{type: mongoose.Schema.Types.ObjectId, ref: "Measurement"}],
+      type: String,
+      enum: [
+        "placed",
+        "cutting",
+        "handworking",
+        "tailoring",
+        "finishing",
+        "qualifying",
+        "completed",
+      ],
+      default: "placed",
+    },
 
+    // 🔗 Relations
+    tasks: [{ type: mongoose.Schema.Types.ObjectId, ref: "Task" }],
+    measurement: [{ type: mongoose.Schema.Types.ObjectId, ref: "Measurement" }],
 
-    // Stage-specific updates (who + when)
+    // 📝 Stage-specific updates
     cuttingStage: {
       updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Staff" },
       updatedAt: Date,

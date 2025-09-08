@@ -1,36 +1,56 @@
-// models/Task.js
 const mongoose = require("mongoose");
 
 const taskSchema = new mongoose.Schema(
-  {
-    order: { type: mongoose.Schema.Types.ObjectId, ref: "Order", required: true },
-    stage: {
-        type: String,
-        enum: ["Cutter", "Tailor", "Handworker"], // 👈 match Staff role names
-        required: true,
+  {
+    order: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Order",
+      required: true,
     },
-    assignedTo: { 
-        type: mongoose.Schema.Types.ObjectId, 
-        ref: "Staff", 
-        required: true 
+    stage: {
+      type: String,
+      enum: ["Cutter", "Tailor", "Handworker"], // must match staff roles
+      required: true,
     },
-    // Add this field to fix the population error
-    assignedBy: { 
-        type: mongoose.Schema.Types.ObjectId, 
-        ref: "Staff", // Reference to the staff model
-        required: true 
+    assignedTo: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Staff",
+      required: true,
     },
-    deadline: Date,
-    status: { 
-        type: String, 
-        enum: ["pending", "in-progress", "done"], 
-        default: "pending" 
+    assignedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Staff",
+      required: true,
     },
-    startedAt: Date,
-    completedAt: Date,
-    remarks: String,
-  },
-  { timestamps: true }
+    deadline: {
+      type: Date,
+    },
+    status: {
+      type: String,
+      enum: ["pending", "in-progress", "done"],
+      default: "pending",
+    },
+    startedAt: Date,
+    completedAt: Date,
+    remarks: {
+      type: String,
+      trim: true,
+    },
+  },
+  { timestamps: true }
 );
+
+// ✅ Auto push task reference into Order.tasks
+taskSchema.post("save", async function (doc, next) {
+  try {
+    const Order = mongoose.model("Order");
+    await Order.findByIdAndUpdate(doc.order, {
+      $addToSet: { tasks: doc._id }, // prevent duplicates
+    });
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
 
 module.exports = mongoose.model("Task", taskSchema);

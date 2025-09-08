@@ -5,11 +5,7 @@ const customerController = require("../controllers/customerController");
 const { protect, authorize } = require("../middleware/authMiddleware");
 
 // Create new customer
-router.post(
-  "/createcustomer",
-  protect,
-  authorize("admin"),
-  customerController.createCustomer
+router.post( "/createcustomer",protect,authorize("admin"),customerController.createCustomer
 );
 
 // Search customers (autocomplete or quick lookup)
