@@ -43,18 +43,20 @@ const CutterDashboard = () => {
 
   return (
     <div className="p-6">
-      {/* ✅ Title on top-left */}
-      <h1 className="text-4xl font-bold text-gray-700 mb-6">Overview</h1>
+      {/* ✅ Title */}
+      <h1 className="text-3xl sm:text-4xl font-bold text-gray-700 mb-8">
+        Dashboard Overview
+      </h1>
 
-      {/* 3 task boxes */}
+      {/* ✅ Task Summary Boxes */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
         {boxData.map((box) => (
           <div
             key={box.label}
-            className={`p-6 rounded-lg shadow-md ${box.color} text-white flex flex-col items-center justify-center`}
+            className={`p-6 rounded-xl shadow-lg ${box.color} text-white flex flex-col items-center justify-center transition transform hover:scale-105 hover:shadow-2xl`}
           >
-            <h2 className="text-lg font-semibold">{box.label}</h2>
-            <p className="mt-2 text-3xl font-bold">{box.count}</p>
+            <h2 className="text-lg sm:text-xl font-semibold text-center">{box.label}</h2>
+            <p className="mt-3 text-3xl sm:text-4xl font-extrabold">{box.count}</p>
           </div>
         ))}
       </div>

@@ -3,10 +3,11 @@ import { getTasks, updateStaff } from "../../api/cutter";
 
 const CurrentTasks = () => {
   const [tasks, setTasks] = useState([]);
+  const [filteredTasks, setFilteredTasks] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [statusUpdates, setStatusUpdates] = useState({}); // track selected values
+  const [statusUpdates, setStatusUpdates] = useState({});
+  const [searchTerm, setSearchTerm] = useState("");
 
-  // Fetch all tasks and filter only pending tasks
   const fetchTasks = async () => {
     try {
       const data = await getTasks();
@@ -15,11 +16,14 @@ const CurrentTasks = () => {
       if (Array.isArray(data)) tasksArray = data;
       else if (Array.isArray(data.tasks)) tasksArray = data.tasks;
 
-      setTasks(tasksArray.filter((task) => task.status === "pending"));
+      const pendingTasks = tasksArray.filter((task) => task.status === "pending");
+      setTasks(pendingTasks);
+      setFilteredTasks(pendingTasks);
       setLoading(false);
     } catch (err) {
       console.error("Error fetching tasks:", err);
       setTasks([]);
+      setFilteredTasks([]);
       setLoading(false);
     }
   };
@@ -28,7 +32,18 @@ const CurrentTasks = () => {
     fetchTasks();
   }, []);
 
-  // Handle dropdown change
+  useEffect(() => {
+    if (!searchTerm) {
+      setFilteredTasks(tasks);
+      return;
+    }
+
+    const temp = tasks.filter((task) =>
+      task.order?.orderNo?.toString().includes(searchTerm)
+    );
+    setFilteredTasks(temp);
+  }, [searchTerm, tasks]);
+
   const handleSelectChange = (taskId, value) => {
     setStatusUpdates((prev) => ({
       ...prev,
@@ -36,20 +51,20 @@ const CurrentTasks = () => {
     }));
   };
 
-  // Handle save button click
   const handleSaveStatus = async (taskId) => {
     try {
       const status = statusUpdates[taskId];
       if (!status) return;
 
       await updateStaff(taskId, { status });
-      setTasks((prev) => prev.filter((task) => task._id !== taskId)); // remove after update
+      const updatedTasks = tasks.filter((task) => task._id !== taskId);
+      setTasks(updatedTasks);
+      setFilteredTasks(updatedTasks);
     } catch (err) {
       console.error("Error updating status:", err);
     }
   };
 
-  // ✅ Badge color logic
   const getStatusBadge = (status) => {
     switch (status) {
       case "pending":
@@ -64,37 +79,65 @@ const CurrentTasks = () => {
   };
 
   if (loading) return <p className="text-center mt-6">Loading tasks...</p>;
-  if (!tasks.length)
-    return <p className="text-center mt-6 text-gray-500">No current tasks.</p>;
+  if (!filteredTasks.length)
+    return <p className="text-center mt-6 text-gray-500">No tasks found.</p>;
 
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-bold mb-4">Current Tasks</h2>
-      <div className="overflow-x-auto">
-        <table className="min-w-full border border-gray-300">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="border px-4 py-2 text-left">Order No</th>
-              <th className="border px-4 py-2 text-left">Service</th>
-              <th className="border px-4 py-2 text-left">Expected Date</th>
-              <th className="border px-4 py-2 text-left">Measurements</th>
-              <th className="border px-4 py-2 text-left">Status</th>
-              <th className="border px-4 py-2 text-left">Update Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {tasks.map((task) => (
-              <tr key={task._id} className="hover:bg-gray-50">
-                <td className="border px-4 py-2">{task.order?.orderNo || "N/A"}</td>
-                <td className="border px-4 py-2">{task.order?.service || "N/A"}</td>
-                <td className="border px-4 py-2">
+    <div className="p-2">
+      <h2 className="text-2xl font-bold mb-4 text-gray-800">Current Tasks</h2>
+
+      {/* Search Bar */}
+      <div className="mb-4">
+        <input
+          type="text"
+          placeholder="Search by Order No"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="border border-gray-300 px-3 py-2 rounded w-full sm:w-1/2 focus:outline-none focus:ring-2 focus:ring-pink-400 shadow-sm"
+        />
+      </div>
+
+      {/* Tasks Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {filteredTasks.map((task) => (
+          <div
+            key={task._id}
+            className="border rounded-lg shadow-md bg-white hover:shadow-lg transition overflow-hidden"
+          >
+            {/* Header */}
+            <div className="bg-gradient-to-r from-pink-500 to-pink-700 text-white px-4 py-2 flex justify-between items-center">
+              <h3 className="font-bold text-base">Order #{task.order?.orderNo || "N/A"}</h3>
+              <span
+                className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getStatusBadge(
+                  task.status
+                )}`}
+              >
+                {task.status.toUpperCase()}
+              </span>
+            </div>
+
+            {/* Task Details */}
+            <div className="divide-y text-sm">
+              <div className="px-4 py-3 flex justify-between items-center">
+                <span className="font-medium text-gray-600">Service</span>
+                <span className="text-gray-800">{task.order?.service || "N/A"}</span>
+              </div>
+
+              <div className="px-4 py-3 flex justify-between items-center">
+                <span className="font-medium text-gray-600">Expected</span>
+                <span className="text-gray-800">
                   {task.order?.expectedDate
                     ? new Date(task.order.expectedDate).toDateString()
                     : "N/A"}
-                </td>
-                <td className="border px-4 py-2">
+                </span>
+              </div>
+
+              {/* Measurements + Status inline on mobile */}
+              <div className="px-4 py-3 flex flex-col sm:flex-row sm:justify-between gap-4">
+                <div className="flex-1 min-w-[50%]">
+                  <span className="font-medium text-gray-600 block mb-1">Measurements</span>
                   {task.order?.measurement?.length > 0 ? (
-                    <ul className="list-disc ml-5 text-sm">
+                    <ul className="list-disc ml-5 text-gray-700 text-xs">
                       {task.order.measurement.map((m) => (
                         <li key={m._id}>
                           <strong>{m.category}:</strong>{" "}
@@ -103,49 +146,39 @@ const CurrentTasks = () => {
                       ))}
                     </ul>
                   ) : (
-                    "N/A"
+                    <span className="text-gray-400">N/A</span>
                   )}
-                </td>
+                </div>
+              </div>
 
-                {/* ✅ Status Badge */}
-                <td className="border px-4 py-2">
-                  <span
-                    className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusBadge(
-                      task.status
-                    )}`}
+              {/* Controls */}
+              <div className="px-4 py-3 flex items-center gap-2">
+                <select
+                  value={statusUpdates[task._id] || ""}
+                  onChange={(e) =>
+                    handleSelectChange(task._id, e.target.value)
+                  }
+                  className="border border-gray-300 px-2 py-1 rounded w-full text-sm focus:outline-none focus:ring-2 focus:ring-pink-400 shadow-sm"
+                >
+                  <option value="" disabled>
+                    Update Status
+                  </option>
+                  <option value="in-progress">In Progress</option>
+                  <option value="done">Done</option>
+                </select>
+
+                {statusUpdates[task._id] && (
+                  <button
+                    onClick={() => handleSaveStatus(task._id)}
+                    className="bg-pink-600 text-white px-4 py-1 rounded hover:bg-pink-700 shadow-sm transition"
                   >
-                    {task.status}
-                  </span>
-                </td>
-
-                {/* ✅ Dropdown + Save only after selection */}
-                <td className="border px-4 py-2 flex items-center gap-2">
-                  <select
-                    value={statusUpdates[task._id] || ""}
-                    onChange={(e) => handleSelectChange(task._id, e.target.value)}
-                    className="border px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  >
-                    <option value="" disabled>
-                      Select Status
-                    </option>
-                    <option value="in-progress">In Progress</option>
-                    <option value="done">Done</option>
-                  </select>
-
-                  {/* Only show Save when a value is chosen */}
-                  {statusUpdates[task._id] && (
-                    <button
-                      onClick={() => handleSaveStatus(task._id)}
-                      className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
-                    >
-                      Save
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                    Save
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
