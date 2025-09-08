@@ -1,21 +1,16 @@
 import React, { useEffect, useState } from "react";
 import { getTasks, updateStaff } from "../../api/cutter";
 
-const CurrentTasks = () => {
+const InProgressTasks = () => {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [statusUpdates, setStatusUpdates] = useState({}); // track selected values
+  const [statusUpdates, setStatusUpdates] = useState({});
 
-  // Fetch all tasks and filter only pending tasks
   const fetchTasks = async () => {
     try {
       const data = await getTasks();
-      let tasksArray = [];
-
-      if (Array.isArray(data)) tasksArray = data;
-      else if (Array.isArray(data.tasks)) tasksArray = data.tasks;
-
-      setTasks(tasksArray.filter((task) => task.status === "pending"));
+      const allTasks = Array.isArray(data) ? data : data.tasks || [];
+      setTasks(allTasks.filter((t) => t.status === "in-progress"));
       setLoading(false);
     } catch (err) {
       console.error("Error fetching tasks:", err);
@@ -28,7 +23,6 @@ const CurrentTasks = () => {
     fetchTasks();
   }, []);
 
-  // Handle dropdown change
   const handleSelectChange = (taskId, value) => {
     setStatusUpdates((prev) => ({
       ...prev,
@@ -36,40 +30,36 @@ const CurrentTasks = () => {
     }));
   };
 
-  // Handle save button click
   const handleSaveStatus = async (taskId) => {
     try {
       const status = statusUpdates[taskId];
       if (!status) return;
-
       await updateStaff(taskId, { status });
-      setTasks((prev) => prev.filter((task) => task._id !== taskId)); // remove after update
+      fetchTasks(); // refresh
     } catch (err) {
-      console.error("Error updating status:", err);
+      console.error("Error saving status:", err);
     }
   };
 
-  // ✅ Badge color logic
   const getStatusBadge = (status) => {
-    switch (status) {
-      case "pending":
-        return "bg-red-100 text-red-700";
-      case "in-progress":
-        return "bg-yellow-100 text-yellow-700";
-      case "done":
-        return "bg-green-100 text-green-700";
-      default:
-        return "bg-gray-100 text-gray-700";
-    }
+    let color = "bg-gray-300 text-gray-800";
+    if (status === "pending") color = "bg-red-100 text-red-700";
+    if (status === "in-progress") color = "bg-yellow-100 text-yellow-700";
+    if (status === "done") color = "bg-green-100 text-green-700";
+    return (
+      <span className={`px-3 py-1 text-sm rounded-full font-medium ${color}`}>
+        {status}
+      </span>
+    );
   };
 
-  if (loading) return <p className="text-center mt-6">Loading tasks...</p>;
+  if (loading) return <p className="text-center mt-6">Loading...</p>;
   if (!tasks.length)
-    return <p className="text-center mt-6 text-gray-500">No current tasks.</p>;
+    return <p className="text-center mt-6 text-gray-500">No in-progress tasks.</p>;
 
   return (
     <div className="p-6">
-      <h2 className="text-2xl font-bold mb-4">Current Tasks</h2>
+      <h2 className="text-2xl font-bold mb-4">In Progress Tasks</h2>
       <div className="overflow-x-auto">
         <table className="min-w-full border border-gray-300">
           <thead className="bg-gray-100">
@@ -77,7 +67,6 @@ const CurrentTasks = () => {
               <th className="border px-4 py-2 text-left">Order No</th>
               <th className="border px-4 py-2 text-left">Service</th>
               <th className="border px-4 py-2 text-left">Expected Date</th>
-              <th className="border px-4 py-2 text-left">Measurements</th>
               <th className="border px-4 py-2 text-left">Status</th>
               <th className="border px-4 py-2 text-left">Update Status</th>
             </tr>
@@ -92,33 +81,9 @@ const CurrentTasks = () => {
                     ? new Date(task.order.expectedDate).toDateString()
                     : "N/A"}
                 </td>
-                <td className="border px-4 py-2">
-                  {task.order?.measurement?.length > 0 ? (
-                    <ul className="list-disc ml-5 text-sm">
-                      {task.order.measurement.map((m) => (
-                        <li key={m._id}>
-                          <strong>{m.category}:</strong>{" "}
-                          {m.data.map((d) => `${d.key}: ${d.value}`).join(", ")}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    "N/A"
-                  )}
-                </td>
+                <td className="border px-4 py-2">{getStatusBadge(task.status)}</td>
 
-                {/* ✅ Status Badge */}
-                <td className="border px-4 py-2">
-                  <span
-                    className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusBadge(
-                      task.status
-                    )}`}
-                  >
-                    {task.status}
-                  </span>
-                </td>
-
-                {/* ✅ Dropdown + Save only after selection */}
+                {/* ✅ Dropdown with default + Save only when selected */}
                 <td className="border px-4 py-2 flex items-center gap-2">
                   <select
                     value={statusUpdates[task._id] || ""}
@@ -128,11 +93,11 @@ const CurrentTasks = () => {
                     <option value="" disabled>
                       Select Status
                     </option>
-                    <option value="in-progress">In Progress</option>
                     <option value="done">Done</option>
+                    <option value="pending">Pending</option>
                   </select>
 
-                  {/* Only show Save when a value is chosen */}
+                  {/* Show Save button only if a value is chosen */}
                   {statusUpdates[task._id] && (
                     <button
                       onClick={() => handleSaveStatus(task._id)}
@@ -151,4 +116,4 @@ const CurrentTasks = () => {
   );
 };
 
-export default CurrentTasks;
+export default InProgressTasks;

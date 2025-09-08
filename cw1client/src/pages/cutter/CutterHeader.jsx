@@ -44,9 +44,9 @@ const CutterHeader = () => {
             <div className="flex items-center space-x-3 cursor-pointer">
               {cutter?.profileImage ? (
                 <img
-                  src={cutter.profileImage}
+                  src="https://cdn-icons-png.flaticon.com/512/10337/10337609.png"
                   alt={cutter.name}
-                  className="w-8 h-8 rounded-full"
+                  className="w-7 h-7 rounded-full"
                 />
               ) : (
                 <div className="w-8 h-8 bg-pink-500 rounded-full flex items-center justify-center">
