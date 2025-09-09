@@ -3,18 +3,23 @@ import { getTasks, updateStaff } from "../../api/cutter";
 
 const InProgressTasks = () => {
   const [tasks, setTasks] = useState([]);
+  const [filteredTasks, setFilteredTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusUpdates, setStatusUpdates] = useState({});
+  const [searchTerm, setSearchTerm] = useState("");
 
   const fetchTasks = async () => {
     try {
       const data = await getTasks();
       const allTasks = Array.isArray(data) ? data : data.tasks || [];
-      setTasks(allTasks.filter((t) => t.status === "in-progress"));
+      const inProgress = allTasks.filter((t) => t.status === "in-progress");
+      setTasks(inProgress);
+      setFilteredTasks(inProgress);
       setLoading(false);
     } catch (err) {
       console.error("Error fetching tasks:", err);
       setTasks([]);
+      setFilteredTasks([]);
       setLoading(false);
     }
   };
@@ -22,6 +27,18 @@ const InProgressTasks = () => {
   useEffect(() => {
     fetchTasks();
   }, []);
+
+  // Search by Order No
+  useEffect(() => {
+    if (!searchTerm) {
+      setFilteredTasks(tasks);
+      return;
+    }
+    const temp = tasks.filter((task) =>
+      task.order?.orderNo?.toString().includes(searchTerm)
+    );
+    setFilteredTasks(temp);
+  }, [searchTerm, tasks]);
 
   const handleSelectChange = (taskId, value) => {
     setStatusUpdates((prev) => ({
@@ -35,82 +52,119 @@ const InProgressTasks = () => {
       const status = statusUpdates[taskId];
       if (!status) return;
       await updateStaff(taskId, { status });
-      fetchTasks(); // refresh
+      fetchTasks();
     } catch (err) {
       console.error("Error saving status:", err);
     }
   };
 
   const getStatusBadge = (status) => {
-    let color = "bg-gray-300 text-gray-800";
-    if (status === "pending") color = "bg-red-100 text-red-700";
-    if (status === "in-progress") color = "bg-yellow-100 text-yellow-700";
-    if (status === "done") color = "bg-green-100 text-green-700";
-    return (
-      <span className={`px-3 py-1 text-sm rounded-full font-medium ${color}`}>
-        {status}
-      </span>
-    );
+    switch (status) {
+      case "pending":
+        return "bg-red-100 text-red-700";
+      case "in-progress":
+        return "bg-yellow-100 text-yellow-700";
+      case "done":
+        return "bg-green-100 text-green-700";
+      default:
+        return "bg-gray-100 text-gray-700";
+    }
   };
 
-  if (loading) return <p className="text-center mt-6">Loading...</p>;
-  if (!tasks.length)
-    return <p className="text-center mt-6 text-gray-500">No in-progress tasks.</p>;
+  if (loading) return <p className="text-center mt-6">Loading tasks...</p>;
+  if (!filteredTasks.length)
+    return <p className="text-center mt-6 text-gray-500">No tasks found.</p>;
 
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-bold mb-4">In Progress Tasks</h2>
-      <div className="overflow-x-auto">
-        <table className="min-w-full border border-gray-300">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="border px-4 py-2 text-left">Order No</th>
-              <th className="border px-4 py-2 text-left">Service</th>
-              <th className="border px-4 py-2 text-left">Expected Date</th>
-              <th className="border px-4 py-2 text-left">Status</th>
-              <th className="border px-4 py-2 text-left">Update Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {tasks.map((task) => (
-              <tr key={task._id} className="hover:bg-gray-50">
-                <td className="border px-4 py-2">{task.order?.orderNo || "N/A"}</td>
-                <td className="border px-4 py-2">{task.order?.service || "N/A"}</td>
-                <td className="border px-4 py-2">
+    <div className="p-2">
+      <h2 className="text-2xl font-bold mb-4 text-gray-800">In Progress Tasks</h2>
+
+      {/* Search Bar */}
+      <div className="mb-4">
+        <input
+          type="text"
+          placeholder="Search by Order No"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="border border-gray-300 px-3 py-2 rounded w-full sm:w-1/2 focus:outline-none focus:ring-2 focus:ring-pink-400 shadow-sm"
+        />
+      </div>
+
+      {/* Responsive Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {filteredTasks.map((task) => (
+          <div
+            key={task._id}
+            className="border rounded-lg shadow-md bg-white hover:shadow-lg transition overflow-hidden"
+          >
+            <div className="bg-gradient-to-r from-pink-500 to-pink-700 text-white px-4 py-2 flex justify-between items-center">
+              <h3 className="font-bold text-base">Order #{task.order?.orderNo || "N/A"}</h3>
+              <span
+                className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getStatusBadge(
+                  task.status
+                )}`}
+              >
+                {task.status.toUpperCase()}
+              </span>
+            </div>
+
+            <div className="divide-y text-sm">
+              <div className="px-4 py-3 flex justify-between items-center">
+                <span className="font-medium text-gray-600">Service</span>
+                <span className="text-gray-800">{task.order?.service || "N/A"}</span>
+              </div>
+
+              <div className="px-4 py-3 flex justify-between items-center">
+                <span className="font-medium text-gray-600">Expected</span>
+                <span className="text-gray-800">
                   {task.order?.expectedDate
                     ? new Date(task.order.expectedDate).toDateString()
                     : "N/A"}
-                </td>
-                <td className="border px-4 py-2">{getStatusBadge(task.status)}</td>
+                </span>
+              </div>
 
-                {/* ✅ Dropdown with default + Save only when selected */}
-                <td className="border px-4 py-2 flex items-center gap-2">
-                  <select
-                    value={statusUpdates[task._id] || ""}
-                    onChange={(e) => handleSelectChange(task._id, e.target.value)}
-                    className="border px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+              <div className="px-4 py-3">
+                <span className="font-medium text-gray-600 block mb-1">Measurements</span>
+                {task.order?.measurement?.length > 0 ? (
+                  <ul className="list-disc ml-5 text-gray-700 text-xs">
+                    {task.order.measurement.map((m) => (
+                      <li key={m._id}>
+                        <strong>{m.category}:</strong>{" "}
+                        {m.data.map((d) => `${d.key}: ${d.value}`).join(", ")}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <span className="text-gray-400">N/A</span>
+                )}
+              </div>
+
+              {/* Controls */}
+              <div className="px-4 py-3 flex items-center gap-2">
+                <select
+                  value={statusUpdates[task._id] || ""}
+                  onChange={(e) => handleSelectChange(task._id, e.target.value)}
+                  className="border border-gray-300 px-2 py-1 rounded w-full text-sm focus:outline-none focus:ring-2 focus:ring-pink-400 shadow-sm"
+                >
+                  <option value="" disabled>
+                    Update Status
+                  </option>
+                  <option value="done">Done</option>
+                  <option value="pending">Pending</option>
+                </select>
+
+                {statusUpdates[task._id] && (
+                  <button
+                    onClick={() => handleSaveStatus(task._id)}
+                    className="bg-pink-600 text-white px-4 py-1 rounded hover:bg-pink-700 shadow-sm transition"
                   >
-                    <option value="" disabled>
-                      Select Status
-                    </option>
-                    <option value="done">Done</option>
-                    <option value="pending">Pending</option>
-                  </select>
-
-                  {/* Show Save button only if a value is chosen */}
-                  {statusUpdates[task._id] && (
-                    <button
-                      onClick={() => handleSaveStatus(task._id)}
-                      className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
-                    >
-                      Save
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                    Save
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
