@@ -13,20 +13,25 @@
        const data = await userLogin(username, password); // 👈 using admin.js
        console.log("Login response:", data); 
 
-       const { role } = data; // role comes from backend response
+      const { role } = data;
 
-       if (role === "admin") {
-         navigate("/admin/dashboard");
-       } else if (role === "tailor") {
-         navigate("/tailor/dashboard");
-       } else if (role === "manager") {
-         navigate("/manager/dashboard");
-       }else if (role === "Cutter") {
-         navigate("/cutter/dashboard");
-       } 
-       else {
-         navigate("/");
-       }
+switch (role.toLowerCase()) {
+  case "admin":
+    navigate("/admin/dashboard");
+    break;
+  case "tailor":
+    navigate("/tailor/dashboard");
+    break;
+  case "manager":
+    navigate("/manager/dashboard");
+    break;
+  case "cutter":
+    navigate("/cutter/dashboard");
+    break;
+  default:
+    navigate("/");
+}
+
      } catch (error) {
        alert("Invalid login credentials");
      }
