@@ -3,6 +3,8 @@ import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import ManagerLayout from "../pages/manager/ManagerLayout";
 import ManagerDashboard from "../pages/manager/ManagerDashboard";
+import ManagerStaff from "../pages/manager/ManagerStaff";
+import ManagerOrders from "../pages/manager/ManagerOrders";
 
 export default function ManagerRoutes() {
   return (
@@ -13,6 +15,8 @@ export default function ManagerRoutes() {
 
         {/* Child routes inside ManagerLayout */}
         <Route path="dashboard" element={<ManagerDashboard />} />
+        <Route path="staff" element={<ManagerStaff />} />
+        <Route path="orders" element={<ManagerOrders />} />
       </Route>
     </Routes>
   );
