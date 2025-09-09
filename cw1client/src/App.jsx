@@ -3,6 +3,7 @@ import { Routes, Route } from "react-router-dom";
 import Login from "./component/Login";
 import AdminRoutes from "./routes/AdminRoutes";
 import CutterRoutes from "./routes/CutterRoutes";
+import ManagerRoutes from "./routes/ManagerRoutes";
 
 export default function App() {
   return (
@@ -15,7 +16,9 @@ export default function App() {
 
       {/* Cutter routes */}
       <Route path="/cutter/*" element={<CutterRoutes />} />
-      
+
+      {/* Manager routes */}
+   <Route path="/manager/*" element={<ManagerRoutes />} />
     </Routes>
   );
 }
