@@ -90,7 +90,24 @@ exports.updateTaskStatus = async (req, res) => {
 };
 
 
-// exports.updateProfile = async (req, res) => {
+
+exports.getTaskStatusCounts = async (req, res) => {
+  try {
+    const pendingCount = await Task.countDocuments({ status: "pending" });
+    const inProgressCount = await Task.countDocuments({ status: "in-progress" });
+    const doneCount = await Task.countDocuments({ status: "done" });
+
+    res.status(200).json({
+      pending: pendingCount,
+      inProgress: inProgressCount,
+      done: doneCount,
+    });
+  } catch (err) {
+    console.error("Error fetching task counts:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 //   try {
 //     const { name, email, mobile, address, gender,  } = req.body;
 
