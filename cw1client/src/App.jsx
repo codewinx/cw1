@@ -18,7 +18,7 @@ export default function App() {
       <Route path="/cutter/*" element={<CutterRoutes />} />
 
       {/* Manager routes */}
-   <Route path="/manager/*" element={<ManagerRoutes />} />
+   <Route path="/*" element={<ManagerRoutes />} />
     </Routes>
   );
 }
