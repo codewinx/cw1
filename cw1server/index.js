@@ -32,8 +32,10 @@ const staffRoutes = require("./routes/stafRoutes");
 const cutterRoutes = require("./routes/cutterRoutes");
 const tailorRoutes = require("./routes/tailorRoutes");
 const taskRoutes = require("./routes/taskRoutes");  // ✅ add this
-
+// const managerRoutes = require("./routes/managerRoutes");
 // const tailorRoutes = require('./routes/tailorRoutes');
+const managerRoutes = require("./routes/managerRoutes");
+// const managerRoutes = require("./routes/managerRoutes");
 // Admin or Manager can add customer
 app.use('/api/customer', customerRoutes);
 app.use('/api/auth', authRoutes);
@@ -43,8 +45,8 @@ app.use("/api/staff", staffRoutes);
 app.use("/api/cutter", cutterRoutes);
 app.use("/api/tailor", tailorRoutes);
 app.use("/api/task", taskRoutes);   // ✅ plural: /api/tasks
-
-
+// app.use('/api/manager', managerRoutes);
+app.use("/api/manager",managerRoutes);
 // =========================
 // Static folder for profile images
 // =========================
