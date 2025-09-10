@@ -30,13 +30,20 @@ exports.getCurrentStaff = async (req, res) => {
 
 exports.getCutterTasks = async (req, res) => {
   try {
-    const tasks = await Task.find()
+    // Cutter ID can come from JWT auth or from params/query
+    const cutterId = req.user?._id || req.params.cutterId;
+
+    if (!cutterId) {
+      return res.status(400).json({ error: "Cutter ID is required" });
+    }
+
+    const tasks = await Task.find({ assignedTo: cutterId })  // ✅ Only fetch tasks for this cutter
       .populate({
         path: "order",
         populate: {
-          path: "measurement",   // populate measurement inside order
-          model: "Measurement"
-        }
+          path: "measurement",
+          model: "Measurement",
+        },
       })
       .populate("assignedTo"); // populate assigned staff details
 
@@ -46,6 +53,7 @@ exports.getCutterTasks = async (req, res) => {
     res.status(500).json({ error: "Server error while fetching tasks" });
   }
 };
+
 
 exports.updateTaskStatus = async (req, res) => {
   try {

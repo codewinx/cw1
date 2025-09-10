@@ -31,7 +31,7 @@ const CutterHeader = () => {
           {/* Just empty spacer instead of hamburger */}
           <div className="w-7 sm:w-8"></div>
 
-          <div>
+          <div className="px-2">
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
               Dashboard
             </h1>
