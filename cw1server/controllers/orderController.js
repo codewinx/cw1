@@ -58,14 +58,14 @@ exports.createOrder = async (req, res) => {
       category,
       service,
       design,
-      rawMaterial,
+  rawMaterial, // structured object
       expectedDate,
       totalAmount,
       advanceAmount,
       extraCharges,
       pendingAmount,
       paymentMethod,
-      measurement: measurementId,
+  measurement: measurementId ? [measurementId] : [], // ensure array
       createdBy: req.user._id,
     });
 

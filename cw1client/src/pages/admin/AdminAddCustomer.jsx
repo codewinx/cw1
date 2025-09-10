@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { createCustomer } from "../../api/customer"; 
+import { createMeasurement } from "../../api/measurement"; // ✅ import API
 import { PlusCircle, MinusCircle } from "lucide-react";
 
 const AdminAddCustomer = () => {
@@ -12,6 +13,7 @@ const AdminAddCustomer = () => {
     category: "",
   });
 
+  const [customerId, setCustomerId] = useState(null); // ✅ store created customer ID
   const [message, setMessage] = useState("");
   const [showMeasurements, setShowMeasurements] = useState(false);
   const [measurements, setMeasurements] = useState([{ key: "", value: "" }]);
@@ -37,25 +39,37 @@ const AdminAddCustomer = () => {
     setMeasurements(newMeasurements);
   };
 
-  // Save customer (without measurements)
+  // Save customer
   const handleCustomerSubmit = async (e) => {
     e.preventDefault();
     try {
-      const dataToSend = { ...formData };
-      const data = await createCustomer(dataToSend);
+      const data = await createCustomer(formData);
       setMessage(data.message || "Customer added successfully!");
+      setCustomerId(data.customer._id); // ✅ store ID for measurements
 
-      // Reset form
-      setFormData({ name: "", email: "", phone: "", address: "", gender: "", category: "" });
+      // Reset form except category
+      setFormData({
+        name: "",
+        email: "",
+        phone: "",
+        address: "",
+        gender: "",
+        category: "",
+      });
     } catch (error) {
       setMessage(error.message || "Something went wrong while adding customer");
     }
   };
 
-  // Save measurements separately
+  // Save measurements
   const handleMeasurementSubmit = async () => {
     try {
-      const validMeasurements = measurements.filter(m => m.key && m.value);
+      if (!customerId) {
+        setMeasurementMessage("Please save customer before adding measurements.");
+        return;
+      }
+
+      const validMeasurements = measurements.filter((m) => m.key && m.value);
       if (!formData.category) {
         setMeasurementMessage("Please enter a measurement category.");
         return;
@@ -65,17 +79,14 @@ const AdminAddCustomer = () => {
         return;
       }
 
-      // 🔹 Here you can call a separate API like createMeasurements(formData.category, validMeasurements)
-      console.log("Measurements saved:", {
-        category: formData.category,
-        measurements: validMeasurements
-      });
+      // ✅ Call backend API
+      const res = await createMeasurement(customerId, formData.category, validMeasurements);
 
-      setMeasurementMessage("Measurements saved successfully!");
+      setMeasurementMessage(res.message || "Measurements saved successfully!");
       setMeasurements([{ key: "", value: "" }]);
       setFormData({ ...formData, category: "" });
     } catch (error) {
-      setMeasurementMessage("Something went wrong while saving measurements");
+      setMeasurementMessage(error.message || "Something went wrong while saving measurements");
     }
   };
 
@@ -85,66 +96,34 @@ const AdminAddCustomer = () => {
 
       {message && <p className="mb-3 text-sm text-blue-600 font-medium">{message}</p>}
 
-   <form onSubmit={handleCustomerSubmit} className="space-y-4">
-  <div className="grid grid-cols-2 gap-4">
-    <input 
-      type="text" 
-      name="name" 
-      value={formData.name} 
-      placeholder="Customer Name"
-      onChange={handleCustomerChange} 
-      className="w-full border p-2 rounded" 
-      required 
-    />
+      {/* Customer Form */}
+      <form onSubmit={handleCustomerSubmit} className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <input type="text" name="name" value={formData.name} placeholder="Customer Name"
+            onChange={handleCustomerChange} className="w-full border p-2 rounded" required />
 
-    <input 
-      type="email" 
-      name="email" 
-      value={formData.email} 
-      placeholder="Email"
-      onChange={handleCustomerChange} 
-      className="w-full border p-2 rounded" 
-    />
+          <input type="email" name="email" value={formData.email} placeholder="Email"
+            onChange={handleCustomerChange} className="w-full border p-2 rounded" />
 
-    <input 
-      type="text" 
-      name="phone" 
-      value={formData.phone} 
-      placeholder="Phone Number"
-      onChange={handleCustomerChange} 
-      className="w-full border p-2 rounded" 
-      required 
-    />
+          <input type="text" name="phone" value={formData.phone} placeholder="Phone Number"
+            onChange={handleCustomerChange} className="w-full border p-2 rounded" required />
 
-    <input 
-      type="text" 
-      name="address" 
-      value={formData.address} 
-      placeholder="Address"
-      onChange={handleCustomerChange} 
-      className="w-full border p-2 rounded" 
-    />
+          <input type="text" name="address" value={formData.address} placeholder="Address"
+            onChange={handleCustomerChange} className="w-full border p-2 rounded" />
 
-    <select 
-      name="gender" 
-      value={formData.gender} 
-      onChange={handleCustomerChange}
-      className="w-full border p-2 rounded col-span-2"
-    >
-      <option value="">Select Gender</option>
-      <option value="male">Male</option>
-      <option value="female">Female</option>
-    </select>
-  </div>
+          <select name="gender" value={formData.gender}
+            onChange={handleCustomerChange} className="w-full border p-2 rounded col-span-2">
+            <option value="">Select Gender</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+          </select>
+        </div>
 
-  <button 
-    type="submit"
-    className="w-full bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 mt-4"
-  >
-    Save Customer
-  </button>
-</form>
-
+        <button type="submit"
+          className="w-full bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 mt-4">
+          Save Customer
+        </button>
+      </form>
 
       {/* Measurements Section */}
       <div className="border-t pt-4 mt-6">
@@ -156,57 +135,41 @@ const AdminAddCustomer = () => {
           </span>
         </div>
 
-      {showMeasurements && (
-  <div className="space-y-3 mt-4">
-    <input 
-      type="text" 
-      name="category" 
-      value={formData.category}
-      placeholder="Measurement Category (e.g., Shirt, Pants)"
-      onChange={handleCustomerChange} 
-      className="w-full border p-2 rounded" 
-    />
+        {showMeasurements && (
+          <div className="space-y-3 mt-4">
+            {measurementMessage && (
+              <p className="text-sm text-green-600">{measurementMessage}</p>
+            )}
 
-    {measurements.map((measurement, index) => (
-      <div key={index} className="grid grid-cols-2 gap-2 items-center">
-        <input 
-          type="text" 
-          name="key" 
-          value={measurement.key}
-          placeholder="e.g., Chest, Length"
-          onChange={(e) => handleMeasurementChange(index, e)}
-          className="border p-2 rounded" 
-        />
-        
-        <input 
-          type="text" 
-          name="value" 
-          value={measurement.value}
-          placeholder="e.g., 36 inches"
-          onChange={(e) => handleMeasurementChange(index, e)}
-          className="border p-2 rounded" 
-        />
-      </div>
-    ))}
+            <input type="text" name="category" value={formData.category}
+              placeholder="Measurement Category (e.g., Shirt, Pants)"
+              onChange={handleCustomerChange} className="w-full border p-2 rounded" />
 
-    <button 
-      type="button" 
-      onClick={addMeasurementRow}
-      className="w-full bg-gray-200 text-gray-800 p-2 rounded-lg hover:bg-gray-300"
-    >
-      Add another measurement
-    </button>
+            {measurements.map((measurement, index) => (
+              <div key={index} className="grid grid-cols-2 gap-2 items-center">
+                <input type="text" name="key" value={measurement.key}
+                  placeholder="e.g., Chest, Length"
+                  onChange={(e) => handleMeasurementChange(index, e)}
+                  className="border p-2 rounded" />
 
-    <button 
-      type="button" 
-      onClick={handleMeasurementSubmit}
-      className="w-full bg-green-600 text-white p-2 rounded-lg hover:bg-green-700"
-    >
-      Save Measurements
-    </button>
-  </div>
-)}
+                <input type="text" name="value" value={measurement.value}
+                  placeholder="e.g., 36 inches"
+                  onChange={(e) => handleMeasurementChange(index, e)}
+                  className="border p-2 rounded" />
+              </div>
+            ))}
 
+            <button type="button" onClick={addMeasurementRow}
+              className="w-full bg-gray-200 text-gray-800 p-2 rounded-lg hover:bg-gray-300">
+              Add another measurement
+            </button>
+
+            <button type="button" onClick={handleMeasurementSubmit}
+              className="w-full bg-green-600 text-white p-2 rounded-lg hover:bg-green-700">
+              Save Measurements
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
