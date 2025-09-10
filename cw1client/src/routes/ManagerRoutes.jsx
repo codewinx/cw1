@@ -3,12 +3,12 @@ import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import ManagerLayout from "../pages/manager/ManagerLayout";
 import ManagerDashboard from "../pages/manager/ManagerDashboard";
-import ManagerStaff from "../pages/manager/ManagerStaff";
 import ManagerOrders from "../pages/manager/ManagerOrders";
 import ManagerCutter from "../pages/manager/ManagerCutter";
 import ManagerTailor from "../pages/manager/ManagerTailor";
 import ManagerHandworker from "../pages/manager/ManagerHandworker";
 import ManagerOrderManagement from "../pages/manager/ManagerOrderManagement";
+import ManagerTask from "../pages/manager/ManagerTask";
 
 
 export default function ManagerRoutes() {
@@ -20,7 +20,7 @@ export default function ManagerRoutes() {
 
         {/* Child routes inside ManagerLayout */}
         <Route path="dashboard" element={<ManagerDashboard />} />
-        <Route path="staff" element={<ManagerStaff />} />
+        <Route path="task" element={<ManagerTask />} />
         <Route path="orders" element={<ManagerOrders />} />
         <Route path="cutter" element={<ManagerCutter/>} />
         <Route path="tailor" element={<ManagerTailor/>} />

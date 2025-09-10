@@ -142,17 +142,17 @@ import {
 const ManagerSidebar = () => {
   const menuItems = [
     { icon: BarChart3, label: "Dashboard", path: "/manager/dashboard" },
-    { icon: Users, label: "Staff", path: "/manager/staff" },
+    { icon: Users, label: "Tasks", path: "/manager/task" },
     
-    { icon: ShoppingCart, label: "Orders", path: "/manager/orders" },
+    { icon: ShoppingCart, label: "In-progress tasks", path: "/manager/in-progress tasks" },
     
 
     // ✅ New Sections
     
-    { icon: Scissors, label: "Cutter ", path: "/manager/cutter" },
+    { icon: Scissors, label: "Completed Tasks ", path: "/manager/completedtask" },
    
-    { icon: Hand, label: "Handworker", path: "/manager/handworker" },
-    { icon: Shirt, label: "Tailor ", path: "/manager/tailor" },
+    { icon: Hand, label: "Reasign Task", path: "/manager/reasigntask" },
+    { icon: Shirt, label: "Checking Task ", path: "/manager/chekingtasks" },
     { icon: ListChecks, label: "Order Management", path: "/manager/ordermanagement" }
 
 
