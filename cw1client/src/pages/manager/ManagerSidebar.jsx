@@ -149,11 +149,11 @@ const ManagerSidebar = () => {
 
     // ✅ New Sections
     
-    { icon: Scissors, label: "Cutter ", path: "/manager/cutter-selection" },
+    { icon: Scissors, label: "Cutter ", path: "/manager/cutter" },
    
-    { icon: Hand, label: "Handworker", path: "/manager/handwork-selection" },
-    { icon: Shirt, label: "Tailor ", path: "/manager/tailor-selection" },
-    { icon: ListChecks, label: "Order Management", path: "/manager/order-management" }
+    { icon: Hand, label: "Handworker", path: "/manager/handworker" },
+    { icon: Shirt, label: "Tailor ", path: "/manager/tailor" },
+    { icon: ListChecks, label: "Order Management", path: "/manager/ordermanagement" }
 
 
   ];
