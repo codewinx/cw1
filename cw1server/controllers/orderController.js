@@ -19,7 +19,7 @@ exports.createOrder = async (req, res) => {
       advanceAmount,
       extraCharges,
       paymentMethod,
-      measurementId,
+      measurement, // ✅ expect array now
     } = req.body;
 
     // Basic validation
@@ -31,7 +31,7 @@ exports.createOrder = async (req, res) => {
     }
 
     // Measurement check
-    if (!measurementId) {
+    if (!measurement || measurement.length === 0) {
       return res.status(400).json({
         success: false,
         message: "A measurement profile must be selected for this order.",
@@ -58,14 +58,14 @@ exports.createOrder = async (req, res) => {
       category,
       service,
       design,
-  rawMaterial, // structured object
+      rawMaterial, // structured object
       expectedDate,
       totalAmount,
       advanceAmount,
       extraCharges,
       pendingAmount,
       paymentMethod,
-  measurement: measurementId ? [measurementId] : [], // ensure array
+      measurement, // ✅ directly assign array
       createdBy: req.user._id,
     });
 
@@ -85,6 +85,8 @@ exports.createOrder = async (req, res) => {
     });
   }
 };
+
+
 
 // ===============================
 // Get All Orders (with filters)

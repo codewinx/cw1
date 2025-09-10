@@ -28,16 +28,16 @@ const AdminTaskManager = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
 
-  // Fetch orders + staff
+  // Fetch orders & staff
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         const [orderData, staffData] = await Promise.all([
           getOrders(),
-          getAllStaff()
+          getAllStaff(),
         ]);
-        
+
         setOrders(orderData.data || orderData);
         setStaff(staffData.data || []);
       } catch (err) {
@@ -49,12 +49,14 @@ const AdminTaskManager = () => {
     fetchData();
   }, []);
 
-  // Fetch measurements when an order is selected
+  // Fetch measurements when order is selected
   useEffect(() => {
     const fetchMeasurements = async () => {
       if (selectedOrder?.customer?._id) {
         try {
-          const data = await getMeasurementsByCustomerId(selectedOrder.customer._id);
+          const data = await getMeasurementsByCustomerId(
+            selectedOrder.customer._id
+          );
           setMeasurements(data);
         } catch (err) {
           console.error("Error fetching measurements:", err);
@@ -65,24 +67,29 @@ const AdminTaskManager = () => {
     fetchMeasurements();
   }, [selectedOrder]);
 
-  // Filter orders based on search and status
-  const filteredOrders = orders.filter(order => {
+  // Filtered orders
+  const filteredOrders = orders.filter((order) => {
     const searchLower = searchTerm.toLowerCase();
-    const matchesSearch = !searchTerm || 
-                         (order.orderNo && String(order.orderNo).toLowerCase().includes(searchLower)) ||
-                         (order.customer?.name && order.customer.name.toLowerCase().includes(searchLower)) ||
-                         (order.category && order.category.toLowerCase().includes(searchLower)) ||
-                         (order.service && order.service.toLowerCase().includes(searchLower));
+    const matchesSearch =
+      !searchTerm ||
+      (order.orderNo &&
+        String(order.orderNo).toLowerCase().includes(searchLower)) ||
+      (order.customer?.name &&
+        order.customer.name.toLowerCase().includes(searchLower)) ||
+      (order.category && order.category.toLowerCase().includes(searchLower)) ||
+      (order.service && order.service.toLowerCase().includes(searchLower));
+
     const matchesStatus = !statusFilter || order.status === statusFilter;
+
     return matchesSearch && matchesStatus;
   });
 
-  // Assign task with deadline
+  // Assign task
   const handleAssign = async (role) => {
     const workerData = selectedWorkers[role];
     const currentTask = selectedOrder?.tasks?.find((t) => t.stage === role);
-    const currentStaffId = currentTask?.assignedTo?._id;
-    const staffId = workerData?.staffId || currentStaffId;
+
+    const staffId = workerData?.staffId || currentTask?.assignedTo?._id;
     const deadline = workerData?.deadline || currentTask?.deadline;
 
     if (!staffId) {
@@ -100,18 +107,22 @@ const AdminTaskManager = () => {
 
       alert(`${role} task assigned successfully ✅`);
 
-      // Refresh data
+      // Refresh orders
       const orderData = await getOrders();
       setOrders(orderData.data || orderData);
-      const updated = (orderData.data || orderData).find(o => o._id === selectedOrder._id);
+
+      const updated = (orderData.data || orderData).find(
+        (o) => o._id === selectedOrder._id
+      );
       setSelectedOrder(updated);
+
       setSelectedWorkers((prev) => ({ ...prev, [role]: {} }));
     } catch (err) {
       alert(err.response?.data?.error || "Failed to assign task");
     }
   };
 
-  // Role assignment card component
+  // Role Assignment Card
   const RoleAssignmentCard = ({ role, label }) => {
     const currentTask = selectedOrder?.tasks?.find((t) => t.stage === role);
     const assignedStaff = currentTask?.assignedTo?._id || "";
@@ -125,9 +136,14 @@ const AdminTaskManager = () => {
       <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900">{label}</h3>
-          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-            currentTask ? STATUS_COLORS[taskStatus] || "bg-gray-100 text-gray-800" : "bg-gray-100 text-gray-600"
-          }`}>
+          <span
+            className={`px-3 py-1 rounded-full text-xs font-medium ${
+              currentTask
+                ? STATUS_COLORS[taskStatus] ||
+                  "bg-gray-100 text-gray-800"
+                : "bg-gray-100 text-gray-600"
+            }`}
+          >
             {taskStatus}
           </span>
         </div>
@@ -139,7 +155,7 @@ const AdminTaskManager = () => {
               Select Worker
             </label>
             <select
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               value={selectedWorkers[role]?.staffId || assignedStaff}
               onChange={(e) =>
                 setSelectedWorkers((prev) => ({
@@ -150,23 +166,26 @@ const AdminTaskManager = () => {
             >
               <option value="">Choose a worker...</option>
               {staff
-                .filter((s) => s.role?.toLowerCase() === role.toLowerCase())
+                .filter(
+                  (s) => s.role?.toLowerCase() === role.toLowerCase()
+                )
                 .map((s) => (
                   <option key={s._id} value={s._id}>
-                    {s.name} {currentTask?.assignedTo?._id === s._id && "(Current)"}
+                    {s.name}{" "}
+                    {currentTask?.assignedTo?._id === s._id && "(Current)"}
                   </option>
                 ))}
             </select>
           </div>
 
-          {/* Deadline Selection */}
+          {/* Deadline */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Deadline
             </label>
             <input
               type="date"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               value={selectedWorkers[role]?.deadline || formattedDeadline}
               onChange={(e) =>
                 setSelectedWorkers((prev) => ({
@@ -177,15 +196,17 @@ const AdminTaskManager = () => {
             />
           </div>
 
-          {/* Current Assignment Info */}
+          {/* Current Assignment */}
           {currentTask && (
             <div className="bg-gray-50 rounded-lg p-3">
               <p className="text-sm text-gray-600">
-                <span className="font-medium">Current:</span> {currentTask.assignedTo?.name}
+                <span className="font-medium">Current:</span>{" "}
+                {currentTask.assignedTo?.name}
               </p>
               {assignedDeadline && (
                 <p className="text-sm text-gray-600">
-                  <span className="font-medium">Deadline:</span> {new Date(assignedDeadline).toLocaleDateString()}
+                  <span className="font-medium">Deadline:</span>{" "}
+                  {new Date(assignedDeadline).toLocaleDateString()}
                 </p>
               )}
             </div>
@@ -195,8 +216,8 @@ const AdminTaskManager = () => {
           <button
             onClick={() => handleAssign(role)}
             className={`w-full py-2 px-4 rounded-lg font-medium transition-colors ${
-              currentTask 
-                ? "bg-orange-500 hover:bg-orange-600 text-white" 
+              currentTask
+                ? "bg-orange-500 hover:bg-orange-600 text-white"
                 : "bg-blue-600 hover:bg-blue-700 text-white"
             }`}
           >
@@ -220,12 +241,16 @@ const AdminTaskManager = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Task Management Center</h1>
-          <p className="text-gray-600">Assign and manage tasks across your team efficiently</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Task Management Center
+          </h1>
+          <p className="text-gray-600">
+            Assign and manage tasks across your team efficiently
+          </p>
         </div>
 
         {/* Orders List View */}
-        {!selectedOrder && (
+        {!selectedOrder ? (
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
             {/* Filters */}
             <div className="p-6 border-b border-gray-200">
@@ -234,14 +259,14 @@ const AdminTaskManager = () => {
                   <input
                     type="text"
                     placeholder="Search by order number, customer name, or category..."
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </div>
                 <div className="sm:w-48">
                   <select
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
                   >
@@ -259,35 +284,39 @@ const AdminTaskManager = () => {
               <table className="w-full">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase">
                       Order Details
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase">
                       Customer
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase">
                       Service Info
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase">
                       Status
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase">
                       Task Progress
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase">
                       Actions
                     </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {filteredOrders?.length > 0 ? (
+                  {filteredOrders.length > 0 ? (
                     filteredOrders.map((order) => {
                       const tasksAssigned = order.tasks?.length || 0;
                       const totalTasks = Object.keys(ROLE_MAP).length;
-                      const progressPercentage = (tasksAssigned / totalTasks) * 100;
+                      const progressPercentage =
+                        (tasksAssigned / totalTasks) * 100;
 
                       return (
-                        <tr key={order._id} className="hover:bg-gray-50 transition-colors">
+                        <tr
+                          key={order._id}
+                          className="hover:bg-gray-50 transition-colors"
+                        >
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div>
                               <div className="text-sm font-medium text-gray-900">
@@ -304,13 +333,20 @@ const AdminTaskManager = () => {
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">{order.category}</div>
-                            <div className="text-sm text-gray-500">{order.service}</div>
+                            <div className="text-sm text-gray-900">
+                              {order.category}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {order.service}
+                            </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                              STATUS_COLORS[order.status] || "bg-gray-100 text-gray-800"
-                            }`}>
+                            <span
+                              className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                STATUS_COLORS[order.status] ||
+                                "bg-gray-100 text-gray-800"
+                              }`}
+                            >
                               {order.status}
                             </span>
                           </td>
@@ -336,7 +372,9 @@ const AdminTaskManager = () => {
                                   : "bg-blue-100 text-blue-700 hover:bg-blue-200"
                               }`}
                             >
-                              {tasksAssigned > 0 ? "Manage Tasks" : "Assign Tasks"}
+                              {tasksAssigned > 0
+                                ? "Manage Tasks"
+                                : "Assign Tasks"}
                             </button>
                           </td>
                         </tr>
@@ -344,13 +382,11 @@ const AdminTaskManager = () => {
                     })
                   ) : (
                     <tr>
-                      <td colSpan="6" className="px-6 py-12 text-center">
-                        <div className="text-gray-500">
-                          <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                          </svg>
-                          No orders found matching your criteria
-                        </div>
+                      <td
+                        colSpan="6"
+                        className="px-6 py-12 text-center text-gray-500"
+                      >
+                        No orders found matching your criteria
                       </td>
                     </tr>
                   )}
@@ -358,22 +394,22 @@ const AdminTaskManager = () => {
               </table>
             </div>
           </div>
-        )}
-
-        {/* Task Assignment Detail View */}
-        {selectedOrder && (
+        ) : (
           <div className="space-y-6">
-            {/* Header */}
+            {/* Selected Order Header */}
             <div className="bg-white rounded-xl shadow-sm p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900 mb-2">
                     Order #{selectedOrder.orderNo}
                   </h2>
-                  <div className="flex items-center space-x-4 text-sm text-gray-600">
+                  <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
                     <span>Customer: {selectedOrder.customer?.name}</span>
                     <span>•</span>
-                    <span>Date: {new Date(selectedOrder.createdAt).toLocaleDateString()}</span>
+                    <span>
+                      Date:{" "}
+                      {new Date(selectedOrder.createdAt).toLocaleDateString()}
+                    </span>
                     <span>•</span>
                     <span>Category: {selectedOrder.category}</span>
                     <span>•</span>
@@ -389,7 +425,7 @@ const AdminTaskManager = () => {
               </div>
             </div>
 
-            {/* Role Assignment Cards */}
+            {/* Role Assignment */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {Object.entries(ROLE_MAP).map(([key, label]) => (
                 <RoleAssignmentCard key={key} role={key} label={label} />
@@ -399,36 +435,64 @@ const AdminTaskManager = () => {
             {/* Task Summary */}
             <div className="bg-white rounded-xl shadow-sm overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">Task Assignment Summary</h3>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Task Assignment Summary
+                </h3>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Assigned To</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Deadline</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Assigned By</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        Role
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        Assigned To
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        Deadline
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        Status
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        Assigned By
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {Object.keys(ROLE_MAP).map((role) => {
-                      const task = selectedOrder.tasks?.find((t) => t.stage === role);
+                      const task = selectedOrder.tasks?.find(
+                        (t) => t.stage === role
+                      );
                       return (
                         <tr key={role}>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="text-sm font-medium text-gray-900">{ROLE_MAP[role]}</span>
+                            {ROLE_MAP[role]}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="text-sm text-gray-900">
-                              {task?.assignedTo?.name || "-"}
+                            {task?.assignedTo?.name || "-"}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {task?.deadline
+                              ? new Date(task.deadline).toLocaleDateString()
+                              : "-"}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                task
+                                  ? STATUS_COLORS[task.status] ||
+                                    "bg-gray-100 text-gray-800"
+                                  : "bg-gray-100 text-gray-600"
+                              }`}
+                            >
+                              {task?.status || "Not Assigned"}
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="text-sm text-gray-900">
-                              {task?.deadline ? new Date(task.deadline).toLocaleDateString() : "-"}
-                            </span>
+                            {/* {task?.assignedBy? */}
+
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -475,7 +539,10 @@ const AdminTaskManager = () => {
                               {m.data?.length > 0 ? (
                                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
                                   {m.data.map((d, index) => (
-                                    <span key={index} className="bg-gray-100 px-2 py-1 rounded text-xs">
+                                    <span
+                                      key={index}
+                                      className="bg-gray-100 px-2 py-1 rounded text-xs"
+                                    >
                                       {d.key}: {d.value}
                                     </span>
                                   ))}
@@ -492,8 +559,23 @@ const AdminTaskManager = () => {
                 </div>
               ) : (
                 <div className="p-6 text-center text-gray-500">
-                  <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  <svg
+                    className="mx-auto h-12 w-12 text-gray-400 mb-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 
+                      0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 
+                      0a2 2 0 002 2h2a2 2 0 002-2m0 
+                      0V5a2 2 0 012-2h2a2 2 0 012 
+                      2v14a2 2 0 01-2 2h-2a2 2 
+                      0 01-2-2z"
+                    />
                   </svg>
                   No measurements found for this customer
                 </div>

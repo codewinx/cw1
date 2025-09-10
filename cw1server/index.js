@@ -31,6 +31,7 @@ const measurementRoutes = require('./routes/measurementRoutes');
 const staffRoutes = require("./routes/stafRoutes");
 const cutterRoutes = require("./routes/cutterRoutes");
 const tailorRoutes = require("./routes/tailorRoutes");
+const taskRoutes = require("./routes/taskRoutes");  // ✅ add this
 
 // const tailorRoutes = require('./routes/tailorRoutes');
 // Admin or Manager can add customer
@@ -41,6 +42,7 @@ app.use('/api/measurement', measurementRoutes);
 app.use("/api/staff", staffRoutes);
 app.use("/api/cutter", cutterRoutes);
 app.use("/api/tailor", tailorRoutes);
+app.use("/api/task", taskRoutes);   // ✅ plural: /api/tasks
 
 
 // =========================
