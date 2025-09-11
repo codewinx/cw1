@@ -12,6 +12,7 @@ import {
   Clock,
   CheckCircle,
 } from "lucide-react";
+import LogoutButton from "../../component/LogoutButton"; 
 
 export default function TailorSidebar({ open, setOpen }) {
   const menuItems = [
@@ -69,6 +70,11 @@ export default function TailorSidebar({ open, setOpen }) {
             </NavLink>
           ))}
         </nav>
+
+        {/* Logout Button (bottom) */}
+      <div className="mb-6 px-4">
+        <LogoutButton />
+      </div>
       </aside>
     </>
   );
