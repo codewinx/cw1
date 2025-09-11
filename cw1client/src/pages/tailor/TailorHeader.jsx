@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Menu } from "lucide-react";
 import { gettailorinfo } from "../../api/tailor"; // adjust path if needed
+import logo from "./logo.jpg"; // 👈 Import logo.jpg stored in the same folder
 
 export default function TailorHeader({ onMenuClick }) {
   const [staffName, setStaffName] = useState("");
@@ -29,10 +30,10 @@ export default function TailorHeader({ onMenuClick }) {
         <Menu className="h-6 w-6 text-gray-700" />
       </button>
 
-      {/* Title + Welcome line */}
-      <div>
-        <h1 className="text-lg font-semibold">Dashboard</h1>
-        <p className="text-sm text-gray-600">Welcome back, {staffName}</p>
+      {/* Logo + Welcome line */}
+      <div className="flex items-center gap-3">
+        <img src={logo} alt="Logo" className="h-20 w-20 rounded-full" /> 
+        <p className="text-sm text-gray-600">Welcome back {staffName}</p>
       </div>
 
       {/* Right Side (staff name + avatar) */}

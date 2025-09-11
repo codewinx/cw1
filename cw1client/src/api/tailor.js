@@ -36,24 +36,29 @@ export const updateStaff = async (id, data) => {
 
 
 export const getTaskStatusCounts = async () => {
+  const token = localStorage.getItem("token");
+  const res = await api.get("/api/tailor/status-count", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return res.data; // { pending, inProgress, done }
+};
+export const updateTaskStatus = async (taskId, status) => {
   try {
-    const token = localStorage.getItem("token"); // JWT from login
-    const res = await axios.get("/api/tailor/status-count", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    // Map backend response to expected shape
-    const data = res.data;
-
-    return {
-      pending: data.pending ?? data.pendingCount ?? 0,
-      inProgress: data.inProgress ?? data.inProgressCount ?? 0,
-      done: data.done ?? data.completed ?? data.doneCount ?? 0,
-    };
-  } catch (err) {
-    console.error("Error fetching task status counts:", err);
-    return { pending: 0, inProgress: 0, done: 0 };
+    const token = localStorage.getItem("token");
+    const res = await api.put(
+      `/api/tailor/${taskId}`, 
+      { status }, 
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    return res.data; // Updated task object
+  } catch (error) {
+    console.error("Error updating task status:", error);
+    throw error;
   }
 };

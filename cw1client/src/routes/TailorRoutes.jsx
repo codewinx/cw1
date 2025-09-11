@@ -3,7 +3,8 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import TailorLayout from "../pages/tailor/TailorLayout";
 import TailorDashboard from "../pages/tailor/TailorDashboard";
 import AssignedTasks from "../pages/tailor/AssignedTasks";
-
+import InProgressTasks from "../pages/tailor/in-progress-tasks";
+import CompletedTasks from "../pages/tailor/completed-tasks";
 
 export default function TailorRoutes() {
   return (
@@ -12,7 +13,9 @@ export default function TailorRoutes() {
         
 
         <Route path="dashboard" element={<TailorDashboard />} />
-        <Route path="tasks" element={<AssignedTasks />} />
+        <Route path="new-tasks" element={<AssignedTasks />} />
+        <Route path="in-progress-tasks" element={<InProgressTasks />} />
+        <Route path="completed-tasks" element={<CompletedTasks />} />
         
 
 

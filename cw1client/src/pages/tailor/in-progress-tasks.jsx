@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { getTasks, updateTaskStatus } from "../../api/tailor";
 import { Eye, EyeOff } from "lucide-react";
 
-const PendingTasks = () => {
+const InProgressTasks = () => {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusUpdates, setStatusUpdates] = useState({});
@@ -12,7 +12,7 @@ const PendingTasks = () => {
     try {
       const data = await getTasks();
       let tasksArray = Array.isArray(data) ? data : data.tasks || [];
-      setTasks(tasksArray.filter((t) => t.status === "pending"));
+      setTasks(tasksArray.filter((t) => t.status === "in-progress"));
       setLoading(false);
     } catch (err) {
       console.error("Error fetching tasks:", err);
@@ -67,16 +67,16 @@ const PendingTasks = () => {
   };
 
   if (loading)
-    return <p className="text-center mt-6">Loading pending tasks...</p>;
+    return <p className="text-center mt-6">Loading in-progress tasks...</p>;
 
   return (
     <div className="p-4 sm:p-6">
       <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">
-        Pending Tasks
+        In Progress Tasks
       </h2>
 
       {tasks.length === 0 ? (
-        <p className="text-gray-500">No pending tasks.</p>
+        <p className="text-gray-500">No in-progress tasks.</p>
       ) : (
         <>
           {/* Desktop Table */}
@@ -131,7 +131,6 @@ const PendingTasks = () => {
                           <option value="" disabled>
                             Select Status
                           </option>
-                          <option value="in-progress">In Progress</option>
                           <option value="done">Done</option>
                         </select>
                         {statusUpdates[task._id] && (
@@ -184,6 +183,7 @@ const PendingTasks = () => {
                               No measurements available.
                             </p>
                           )}
+
                           <div className="mt-3 text-sm text-gray-800">
                             <strong>Remarks:</strong>{" "}
                             {task.remarks || "No remarks provided"}
@@ -242,7 +242,6 @@ const PendingTasks = () => {
                     <option value="" disabled>
                       Select Status
                     </option>
-                    <option value="in-progress">In Progress</option>
                     <option value="done">Done</option>
                   </select>
                   {statusUpdates[task._id] && (
@@ -304,4 +303,4 @@ const PendingTasks = () => {
   );
 };
 
-export default PendingTasks;
+export default InProgressTasks;

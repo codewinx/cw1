@@ -1,18 +1,17 @@
 import React, { useEffect, useState } from "react";
-import { getTasks, updateTaskStatus } from "../../api/tailor";
+import { getTasks } from "../../api/tailor";
 import { Eye, EyeOff } from "lucide-react";
 
-const PendingTasks = () => {
+const CompletedTasks = () => {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [statusUpdates, setStatusUpdates] = useState({});
   const [expandedTask, setExpandedTask] = useState(null);
 
   const fetchTasks = async () => {
     try {
       const data = await getTasks();
       let tasksArray = Array.isArray(data) ? data : data.tasks || [];
-      setTasks(tasksArray.filter((t) => t.status === "pending"));
+      setTasks(tasksArray.filter((t) => t.status === "done"));
       setLoading(false);
     } catch (err) {
       console.error("Error fetching tasks:", err);
@@ -24,34 +23,6 @@ const PendingTasks = () => {
   useEffect(() => {
     fetchTasks();
   }, []);
-
-  const handleSelectChange = (taskId, value) => {
-    setStatusUpdates((prev) => ({
-      ...prev,
-      [taskId]: value,
-    }));
-  };
-
-  const handleSaveStatus = async (taskId) => {
-    try {
-      const status = statusUpdates[taskId];
-      if (!status) return;
-
-      const updatedTask = await updateTaskStatus(taskId, status);
-      setTasks((prev) =>
-        prev.map((task) =>
-          task._id === taskId ? { ...task, ...updatedTask } : task
-        )
-      );
-      setStatusUpdates((prev) => {
-        const updated = { ...prev };
-        delete updated[taskId];
-        return updated;
-      });
-    } catch (err) {
-      console.error("Error updating status:", err);
-    }
-  };
 
   const getStatusBadge = (status) => {
     switch (status) {
@@ -67,19 +38,19 @@ const PendingTasks = () => {
   };
 
   if (loading)
-    return <p className="text-center mt-6">Loading pending tasks...</p>;
+    return <p className="text-center mt-6">Loading completed tasks...</p>;
 
   return (
     <div className="p-4 sm:p-6">
       <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">
-        Pending Tasks
+        Completed Tasks
       </h2>
 
       {tasks.length === 0 ? (
-        <p className="text-gray-500">No pending tasks.</p>
+        <p className="text-gray-500">No completed tasks.</p>
       ) : (
         <>
-          {/* Desktop Table */}
+          {/* Desktop Table View */}
           <div className="hidden md:block overflow-x-auto">
             <table className="min-w-full border border-gray-300">
               <thead className="bg-gray-100">
@@ -89,7 +60,6 @@ const PendingTasks = () => {
                   <th className="border px-4 py-2 text-left">Expected Date</th>
                   <th className="border px-4 py-2 text-left">Status</th>
                   <th className="border px-4 py-2 text-left">Remarks</th>
-                  <th className="border px-4 py-2 text-left">Update Status</th>
                   <th className="border px-4 py-2 text-left">Measurements</th>
                 </tr>
               </thead>
@@ -120,29 +90,6 @@ const PendingTasks = () => {
                       <td className="border px-4 py-2 text-sm text-gray-700">
                         {task.remarks || "No remarks"}
                       </td>
-                      <td className="border px-4 py-2 flex items-center gap-2">
-                        <select
-                          value={statusUpdates[task._id] || ""}
-                          onChange={(e) =>
-                            handleSelectChange(task._id, e.target.value)
-                          }
-                          className="border px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
-                        >
-                          <option value="" disabled>
-                            Select Status
-                          </option>
-                          <option value="in-progress">In Progress</option>
-                          <option value="done">Done</option>
-                        </select>
-                        {statusUpdates[task._id] && (
-                          <button
-                            onClick={() => handleSaveStatus(task._id)}
-                            className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
-                          >
-                            Save
-                          </button>
-                        )}
-                      </td>
                       <td className="border px-4 py-2 text-center">
                         <button
                           onClick={() =>
@@ -167,7 +114,7 @@ const PendingTasks = () => {
 
                     {expandedTask === task._id && (
                       <tr>
-                        <td colSpan="7" className="border px-4 py-3 bg-gray-50">
+                        <td colSpan="6" className="border px-4 py-3 bg-gray-50">
                           {task.order?.measurement?.length > 0 ? (
                             <ul className="list-disc ml-6 space-y-1 text-sm text-gray-700">
                               {task.order.measurement.map((m) => (
@@ -184,6 +131,7 @@ const PendingTasks = () => {
                               No measurements available.
                             </p>
                           )}
+
                           <div className="mt-3 text-sm text-gray-800">
                             <strong>Remarks:</strong>{" "}
                             {task.remarks || "No remarks provided"}
@@ -230,32 +178,7 @@ const PendingTasks = () => {
                   <strong>Remarks:</strong> {task.remarks || "No remarks"}
                 </p>
 
-                {/* Status Update */}
-                <div className="mt-3 flex items-center gap-2">
-                  <select
-                    value={statusUpdates[task._id] || ""}
-                    onChange={(e) =>
-                      handleSelectChange(task._id, e.target.value)
-                    }
-                    className="border px-2 py-1 rounded flex-1 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  >
-                    <option value="" disabled>
-                      Select Status
-                    </option>
-                    <option value="in-progress">In Progress</option>
-                    <option value="done">Done</option>
-                  </select>
-                  {statusUpdates[task._id] && (
-                    <button
-                      onClick={() => handleSaveStatus(task._id)}
-                      className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
-                    >
-                      Save
-                    </button>
-                  )}
-                </div>
-
-                {/* Measurement Toggle */}
+                {/* Measurements Toggle */}
                 <button
                   onClick={() =>
                     setExpandedTask(
@@ -304,4 +227,4 @@ const PendingTasks = () => {
   );
 };
 
-export default PendingTasks;
+export default CompletedTasks;

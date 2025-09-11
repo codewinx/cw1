@@ -16,10 +16,9 @@ import {
 export default function TailorSidebar({ open, setOpen }) {
   const menuItems = [
     { icon: BarChart3, label: "Dashboard", path: "/tailor/dashboard" },
-    { icon: FileText, label: "Task Manager", path: "/tailor/tasks" },
-    { icon: DollarSign, label: "Payments", path: "/tailor/payments" },
-    { icon: Clock, label: "Reports", path: "/tailor/reports" },
-    { icon: CheckCircle, label: "Completed", path: "/tailor/completed" },
+    { icon: FileText, label: "New Tasks", path: "/tailor/new-tasks" },
+    { icon: Clock, label: "In-Progress", path: "/tailor/in-progress-tasks" },
+    { icon: CheckCircle, label: "Completed", path: "/tailor/completed-tasks" },
   ];
 
   return (
@@ -47,8 +46,8 @@ export default function TailorSidebar({ open, setOpen }) {
 
         {/* Logo / Heading */}
         <div className="p-6 border-b">
-          <h2 className="text-xl font-bold text-pink-600">Her&tness</h2>
-          <p className="text-sm text-gray-500">Boutique Admin</p>
+          <h2 className="text-xl font-bold text-pink-600">Her Hiness Boutique</h2>
+          <p className="text-sm text-gray-500">Tailor Panel</p>
         </div>
 
         {/* Menu Items */}
