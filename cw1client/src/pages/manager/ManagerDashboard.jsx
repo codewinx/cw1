@@ -13,18 +13,29 @@ const ManagerDashboard = () => {
   ];
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Manager Dashboard</h1>
+    <div className="p-8 bg-gradient-to-br from-white via-pink-50 to-rose-50 min-h-screen">
+      <h1 className="text-3xl font-extrabold bg-gradient-to-r from-pink-600 to-rose-500 bg-clip-text text-transparent mb-10">
+        Manager Dashboard
+      </h1>
 
       {/* Dashboard Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
         {stats.map((item, index) => (
           <div
             key={index}
-            className="p-6 bg-white shadow-md rounded-2xl border hover:shadow-lg transition"
+            className="p-6 bg-white rounded-2xl shadow-md hover:shadow-xl transition-transform transform hover:-translate-y-1 border border-pink-100 relative overflow-hidden"
           >
-            <h2 className="text-lg font-semibold text-gray-700">{item.title}</h2>
-            <p className="text-3xl font-bold text-indigo-600 mt-2">{item.value}</p>
+            {/* subtle gradient background accent */}
+            <div className="absolute inset-0 bg-gradient-to-br from-pink-50 via-white to-rose-50 opacity-60 rounded-2xl pointer-events-none"></div>
+
+            <div className="relative z-10">
+              <h2 className="text-lg font-semibold text-gray-700 tracking-wide">
+                {item.title}
+              </h2>
+              <p className="text-4xl font-extrabold bg-gradient-to-r from-pink-600 to-rose-500 text-transparent bg-clip-text mt-3">
+                {item.value}
+              </p>
+            </div>
           </div>
         ))}
       </div>

@@ -3,13 +3,12 @@ import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import ManagerLayout from "../pages/manager/ManagerLayout";
 import ManagerDashboard from "../pages/manager/ManagerDashboard";
-import ManagerOrders from "../pages/manager/ManagerOrders";
-import ManagerCutter from "../pages/manager/ManagerCutter";
-import ManagerTailor from "../pages/manager/ManagerTailor";
-import ManagerHandworker from "../pages/manager/ManagerHandworker";
-import ManagerOrderManagement from "../pages/manager/ManagerOrderManagement";
-import ManagerTask from "../pages/manager/ManagerTask";
 
+import ManagerTask from "../pages/manager/ManagerTask";
+import ManagerInprogressTasks from "../pages/manager/ManagerInprogressTasks";
+import ManagerCompletedTasks from "../pages/manager/ManagerCompletedTasks";
+import ManagerReassignTasks from "../pages/manager/ManagerReassignTasks";
+import ManagerOrderManagement from "../pages/manager/ManagerOrderManagement";
 
 export default function ManagerRoutes() {
   return (
@@ -21,11 +20,11 @@ export default function ManagerRoutes() {
         {/* Child routes inside ManagerLayout */}
         <Route path="dashboard" element={<ManagerDashboard />} />
         <Route path="task" element={<ManagerTask />} />
-        <Route path="orders" element={<ManagerOrders />} />
-        <Route path="cutter" element={<ManagerCutter/>} />
-        <Route path="tailor" element={<ManagerTailor/>} />
-        <Route path="handworker" element={<ManagerHandworker/>} />
-        <Route path="ordermanagement" element={<ManagerOrderManagement/>} />
+        <Route path="in-progress tasks" element={<ManagerInprogressTasks />} />
+        <Route path="completedtasks" element={<ManagerCompletedTasks />} />
+        <Route path="reassigntasks" element={<ManagerReassignTasks />} />
+        <Route path="ordermanagement" element={<ManagerOrderManagement />} />
+       
       </Route>
     </Routes>
   );
