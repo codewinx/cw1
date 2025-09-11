@@ -27,3 +27,7 @@ export const getAdminProfile = async () => {
 export const adminLogout = () => {
   localStorage.removeItem("token");
 };
+export const logoutUser = () => {
+  localStorage.removeItem("token");
+  localStorage.removeItem("role"); // clear role
+};
