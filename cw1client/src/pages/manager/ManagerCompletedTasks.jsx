@@ -1,17 +1,17 @@
 import React from "react";
 
-const ManagerInprogressTasks = () => {
+const ManagerCompletedTasks = () => {
   // Dummy data – later fetch from API
   const tasks = [
-    { id: 1, title: "Order #201", stage: "Cutting", assignedTo: "John", status: "In Progress" },
-    { id: 2, title: "Order #202", stage: "Tailoring", assignedTo: "Alice", status: "In Progress" },
-    { id: 3, title: "Order #203", stage: "Handworker", assignedTo: "Bob", status: "In Progress" },
+    { id: 1, title: "Order #101", stage: "Tailoring", assignedTo: "John", status: "Completed" },
+    { id: 2, title: "Order #102", stage: "Cutting", assignedTo: "Alice", status: "Completed" },
+    { id: 3, title: "Order #103", stage: "Handworker", assignedTo: "Bob", status: "Completed" },
   ];
 
   return (
     <div className="p-4 sm:p-8 bg-gray-50 min-h-screen">
       <h1 className="text-2xl sm:text-3xl font-extrabold mb-6 text-center sm:text-left text-gray-800">
-        In-progress Tasks
+        Completed Tasks
       </h1>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -27,7 +27,7 @@ const ManagerInprogressTasks = () => {
             <p className="text-gray-500 mt-1">
               <span className="font-semibold">Assigned To:</span> {task.assignedTo}
             </p>
-            <p className="text-yellow-600 mt-2 font-bold">{task.status}</p>
+            <p className="text-green-600 mt-2 font-bold">{task.status}</p>
           </div>
         ))}
       </div>
@@ -35,4 +35,4 @@ const ManagerInprogressTasks = () => {
   );
 };
 
-export default ManagerInprogressTasks;
+export default ManagerCompletedTasks;

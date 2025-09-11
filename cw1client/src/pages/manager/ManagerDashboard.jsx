@@ -13,26 +13,26 @@ const ManagerDashboard = () => {
   ];
 
   return (
-    <div className="p-8 bg-gradient-to-br from-white via-pink-50 to-rose-50 min-h-screen">
-      <h1 className="text-3xl font-extrabold bg-gradient-to-r from-pink-600 to-rose-500 bg-clip-text text-transparent mb-10">
+    <div className="p-4 sm:p-8 bg-gradient-to-br from-white via-pink-50 to-rose-50 min-h-screen">
+      <h1 className="text-2xl sm:text-3xl font-extrabold bg-gradient-to-r from-pink-600 to-rose-500 bg-clip-text text-transparent mb-6 sm:mb-10 text-center sm:text-left">
         Manager Dashboard
       </h1>
 
       {/* Dashboard Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
         {stats.map((item, index) => (
           <div
             key={index}
-            className="p-6 bg-white rounded-2xl shadow-md hover:shadow-xl transition-transform transform hover:-translate-y-1 border border-pink-100 relative overflow-hidden"
+            className="p-5 sm:p-6 bg-white rounded-2xl shadow-md hover:shadow-xl transition-transform transform hover:-translate-y-1 border border-pink-100 relative overflow-hidden"
           >
             {/* subtle gradient background accent */}
             <div className="absolute inset-0 bg-gradient-to-br from-pink-50 via-white to-rose-50 opacity-60 rounded-2xl pointer-events-none"></div>
 
             <div className="relative z-10">
-              <h2 className="text-lg font-semibold text-gray-700 tracking-wide">
+              <h2 className="text-base sm:text-lg font-semibold text-gray-700 tracking-wide">
                 {item.title}
               </h2>
-              <p className="text-4xl font-extrabold bg-gradient-to-r from-pink-600 to-rose-500 text-transparent bg-clip-text mt-3">
+              <p className="text-2xl sm:text-4xl font-extrabold bg-gradient-to-r from-pink-600 to-rose-500 text-transparent bg-clip-text mt-2 sm:mt-3">
                 {item.value}
               </p>
             </div>
