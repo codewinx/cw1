@@ -9,6 +9,7 @@ import {
   Hand,
   Shirt,
 } from "lucide-react";
+import LogoutButton from "../../component/LogoutButton"; // 👈 import your logout button
 
 const ManagerSidebar = ({ closeSidebar }) => {
   const menuItems = [
@@ -68,6 +69,11 @@ const ManagerSidebar = ({ closeSidebar }) => {
           </NavLink>
         ))}
       </nav>
+
+      {/* Logout button */}
+      <div className="px-4 py-3 mt-auto">
+        <LogoutButton />
+      </div>
 
       {/* Footer / Branding */}
       <div className="p-4 border-t border-pink-200 text-xs text-center text-gray-500">

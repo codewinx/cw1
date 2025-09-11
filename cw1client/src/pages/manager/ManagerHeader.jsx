@@ -1,13 +1,8 @@
 import React, { useState } from "react";
-import { Bell, LogOut } from "react-feather";
+import { Bell } from "react-feather";
 
 const ManagerHeader = () => {
   const [menuOpen, setMenuOpen] = useState(false);
-
-  const handleLogout = () => {
-    console.log("Logging out...");
-    // Add your logout logic here (clear token, redirect, etc.)
-  };
 
   return (
     <div className="bg-gradient-to-r from-white via-pink-100 to-rose-100 border-b border-pink-200 px-4 sm:px-6 py-4 sm:py-6 shadow-md">
@@ -30,32 +25,14 @@ const ManagerHeader = () => {
             <span className="absolute -top-1 -right-1 w-3 h-3 sm:w-3.5 sm:h-3.5 bg-rose-500 rounded-full ring-2 ring-white shadow-sm"></span>
           </div>
 
-          {/* Profile with dropdown */}
-          <div className="relative">
-            <div
-              onClick={() => setMenuOpen(!menuOpen)}
-              className="flex items-center space-x-2 sm:space-x-4 bg-white rounded-full px-3 sm:px-4 py-1.5 sm:py-2 shadow-lg hover:shadow-xl transition duration-300 cursor-pointer"
-            >
-              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-rose-500 to-pink-500 rounded-full flex items-center justify-center shadow-md">
-                <span className="text-white font-bold text-sm sm:text-base">AM</span>
-              </div>
-              <span className="text-sm sm:text-base font-bold text-gray-900">
-                Admin Manager
-              </span>
+          {/* Profile (no dropdown) */}
+          <div className="flex items-center space-x-2 sm:space-x-4 bg-white rounded-full px-3 sm:px-4 py-1.5 sm:py-2 shadow-lg hover:shadow-xl transition duration-300 cursor-pointer">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-rose-500 to-pink-500 rounded-full flex items-center justify-center shadow-md">
+              <span className="text-white font-bold text-sm sm:text-base">AM</span>
             </div>
-
-            {/* Dropdown menu */}
-            {menuOpen && (
-              <div className="absolute right-0 mt-2 sm:mt-3 w-40 sm:w-48 bg-white shadow-lg rounded-xl py-2 z-50">
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-rose-100 hover:text-rose-600 w-full text-left transition"
-                >
-                  <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
-                  Logout
-                </button>
-              </div>
-            )}
+            <span className="text-sm sm:text-base font-bold text-gray-900">
+              Admin Manager
+            </span>
           </div>
         </div>
       </div>
