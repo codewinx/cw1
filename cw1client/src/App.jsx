@@ -30,6 +30,7 @@ import AdminRoutes from "./routes/AdminRoutes";
 import CutterRoutes from "./routes/CutterRoutes";
 import TailorRoutes from "./routes/TailorRoutes";
 import ManagerRoutes from "./routes/ManagerRoutes";
+import HandworkerRoutes from "./routes/HandworkerRoutes";
 
 export default function App() {
   return (
@@ -48,6 +49,10 @@ export default function App() {
 
       {/* Manager routes */}
       <Route path="/manager/*" element={<ManagerRoutes />} />
+    
+
+      {/* Handworker routes */}
+      <Route path="/handworker/*" element={<HandworkerRoutes />} />
     </Routes>
   );
 }

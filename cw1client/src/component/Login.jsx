@@ -28,6 +28,9 @@ switch (role.toLowerCase()) {
   case "cutter":
     navigate("/cutter/dashboard");
     break;
+  case "handworker":
+    navigate("/handworker/dashboard");
+    break;
   default:
     navigate("/");
 }
