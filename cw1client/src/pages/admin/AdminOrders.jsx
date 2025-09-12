@@ -8,7 +8,7 @@ const AdminOrders = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // New state for filters
+  // Filters
   const [statusFilter, setStatusFilter] = useState("all");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -32,10 +32,10 @@ const AdminOrders = () => {
     setError("");
     try {
       const params = {
-        search: search,
+        search,
         status: statusFilter,
-        startDate: startDate,
-        endDate: endDate,
+        startDate,
+        endDate,
       };
       const data = await getOrders(params);
       setOrders(data);
@@ -47,14 +47,10 @@ const AdminOrders = () => {
   };
 
   useEffect(() => {
-    // Debounce search to prevent excessive API calls
     const handler = setTimeout(() => {
       fetchOrders();
     }, 500);
-
-    return () => {
-      clearTimeout(handler);
-    };
+    return () => clearTimeout(handler);
   }, [search, statusFilter, startDate, endDate]);
 
   // Delete
@@ -105,7 +101,7 @@ const AdminOrders = () => {
     <div className="p-6 bg-gray-50 min-h-screen">
       <h1 className="text-2xl font-bold mb-6 text-gray-800">📦 Order Management</h1>
 
-      {/* Search and Filters */}
+      {/* Search + Filters */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         {/* Search */}
         <div className="flex items-center border rounded-lg px-3 py-2 w-full sm:w-1/3 bg-white shadow-sm">
@@ -131,13 +127,12 @@ const AdminOrders = () => {
             <option value="cutting">Cutting</option>
             <option value="handworking">Handworking</option>
             <option value="tailoring">Tailoring</option>
-            <option value="finishing">Finishing</option>
-            <option value="qualifying">Qualifying</option>
-            <option value="completed">Completed</option>
+            <option value="quality-check">Quality Check</option>
+            <option value="ready-to-delivery">Ready To Delivery</option>
           </select>
         </div>
 
-        {/* Date Filters */}
+        {/* Date Filter */}
         <div className="flex items-center gap-2 w-full sm:w-1/3 bg-white shadow-sm rounded-lg p-2">
           <Calendar className="text-gray-400 w-4 h-4" />
           <input
@@ -188,16 +183,17 @@ const AdminOrders = () => {
                     <td className="px-4 py-3">₹{order.totalAmount}</td>
                     <td className="px-4 py-3">
                       <span
-                        className={`px-2 py-1 rounded text-xs font-semibold ${
-                          order.status === "completed"
-                            ? "bg-green-100 text-green-700"
-                            : order.status === "placed"
-                            ? "bg-yellow-100 text-yellow-700"
-                            : "bg-blue-100 text-blue-700"
-                        }`}
-                      >
-                        {order.status}
-                      </span>
+  className={`px-2 py-1 rounded text-xs font-semibold ${
+    order.status === "ready to delivery"
+      ? "bg-green-100 text-green-700"
+      : order.status === "placed"
+      ? "bg-yellow-100 text-yellow-700"
+      : "bg-blue-100 text-blue-700"
+  }`}
+>
+  {order.status}
+</span>
+
                     </td>
                     <td className="px-4 py-3 flex gap-2">
                       <button
@@ -254,9 +250,9 @@ const AdminOrders = () => {
               <p><strong>Pending Amount:</strong> ₹{viewOrder.pendingAmount}</p>
               <p><strong>Payment Method:</strong> {viewOrder.paymentMethod}</p>
               <p><strong>Status:</strong> {viewOrder.status}</p>
-              <p><strong>Expected Date:</strong> {viewOrder.expectedDate ? new Date(viewOrder.expectedDate).toLocaleDateString() : 'N/A'}</p>
+              <p><strong>Expected Date:</strong> {viewOrder.expectedDate ? new Date(viewOrder.expectedDate).toLocaleDateString() : "N/A"}</p>
               <p><strong>Created On:</strong> {new Date(viewOrder.createdAt).toLocaleDateString()}</p>
-              <p><strong>Created By:</strong> {viewOrder.createdBy?.name || 'N/A'}</p>
+              <p><strong>Created By:</strong> {viewOrder.createdBy?.name || "N/A"}</p>
             </div>
           </div>
         </div>
@@ -303,9 +299,8 @@ const AdminOrders = () => {
               <option value="cutting">Cutting</option>
               <option value="handworking">Handworking</option>
               <option value="tailoring">Tailoring</option>
-              <option value="finishing">Finishing</option>
-              <option value="qualifying">Qualifying</option>
-              <option value="completed">Completed</option>
+              <option value="quality-check">Quality Check</option>
+<option value="ready to delivery">Ready To Delivery</option>
             </select>
             <button
               onClick={handleUpdate}

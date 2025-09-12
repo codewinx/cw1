@@ -25,7 +25,7 @@ const AdminSidebar = () => {
   ];
 
   return (
-    <div className="w-64 bg-gradient-to-b from-white to-pink-50 border-r border-gray-200 h-screen flex flex-col justify-between shadow-lg">
+    <div className="w-64 bg-gradient-to-b from-white to-pink-50 border-r border-gray-200 h-screen  flex-col justify-between shadow-lg">
       <div>
         {/* Logo / Branding */}
         <div className="p-6 flex items-center space-x-3">

@@ -36,13 +36,12 @@ const orderSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: [
-        "placed",
-        "cutting",
-        "handworking",
-        "tailoring",
-        "finishing",
-        "qualifying",
-        "completed",
+        "placed",          // Order received
+        "cutting",         // Cutting stage
+        "handworking",     // Handwork stage
+        "tailoring",       // Tailoring stage
+        "quality-check",   // QC stage
+        "ready-to-delivery" // Final stage before delivery
       ],
       default: "placed",
     },
@@ -68,11 +67,7 @@ const orderSchema = new mongoose.Schema(
       updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Staff" },
       updatedAt: Date,
     },
-    qualifyingStage: {
-      updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Staff" },
-      updatedAt: Date,
-    },
-    completedStage: {
+    qualityCheckStage: {
       updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Staff" },
       updatedAt: Date,
     },

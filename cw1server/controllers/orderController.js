@@ -1,7 +1,6 @@
-// controllers/orderController.js
 const Order = require("../models/Order");
 const Counter = require("../models/Counter");
-const Measurement = require("../models/Measurement");
+const Task = require("../models/Task");
 
 // ===============================
 // Create Order
@@ -19,32 +18,27 @@ exports.createOrder = async (req, res) => {
       advanceAmount,
       extraCharges,
       paymentMethod,
-      measurement, // ✅ expect array now
+      measurement,
     } = req.body;
 
-    // Basic validation
     if (!customer || !category || !service || !totalAmount) {
-      return res.status(400).json({
-        success: false,
-        message: "Customer, category, service, and totalAmount are required",
-      });
+      return res
+        .status(400)
+        .json({ success: false, message: "Customer, category, service, and totalAmount are required" });
     }
 
-    // Measurement check
     if (!measurement || measurement.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "A measurement profile must be selected for this order.",
-      });
+      return res
+        .status(400)
+        .json({ success: false, message: "A measurement profile must be selected" });
     }
 
-    // Generate Order Number
+    // Auto-generate Order No
     const counter = await Counter.findOneAndUpdate(
       { name: "orderNo" },
       { $inc: { value: 1 } },
       { new: true, upsert: true }
     );
-
     const orderNo = counter.value;
 
     // Calculate pending
@@ -58,38 +52,27 @@ exports.createOrder = async (req, res) => {
       category,
       service,
       design,
-      rawMaterial, // structured object
+      rawMaterial,
       expectedDate,
       totalAmount,
       advanceAmount,
       extraCharges,
       pendingAmount,
       paymentMethod,
-      measurement, // ✅ directly assign array
+      measurement,
       createdBy: req.user._id,
     });
 
     await newOrder.save();
 
-    res.status(201).json({
-      success: true,
-      message: "Order created successfully",
-      order: newOrder,
-    });
+    res.status(201).json({ success: true, message: "Order created successfully", order: newOrder });
   } catch (error) {
-    console.error("Error creating order:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error creating order",
-      error: error.message,
-    });
+    res.status(500).json({ success: false, message: "Error creating order", error: error.message });
   }
 };
 
-
-
 // ===============================
-// Get All Orders (with filters)
+// Get All Orders
 // ===============================
 exports.getOrders = async (req, res) => {
   try {
@@ -97,13 +80,11 @@ exports.getOrders = async (req, res) => {
     let filter = {};
 
     if (search) {
-      filter = {
-        $or: [
-          !isNaN(search) ? { orderNo: Number(search) } : null,
-          { category: { $regex: search, $options: "i" } },
-          { service: { $regex: search, $options: "i" } },
-        ].filter(Boolean),
-      };
+      filter.$or = [
+        !isNaN(search) ? { orderNo: Number(search) } : null,
+        { category: { $regex: search, $options: "i" } },
+        { service: { $regex: search, $options: "i" } },
+      ].filter(Boolean);
     }
 
     if (status && status !== "all") {
@@ -129,16 +110,9 @@ exports.getOrders = async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
 
-    res.status(200).json({
-      success: true,
-      data: orders,
-    });
+    res.status(200).json({ success: true, data: orders });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Error fetching orders",
-      error: error.message,
-    });
+    res.status(500).json({ success: false, message: "Error fetching orders", error: error.message });
   }
 };
 
@@ -158,54 +132,72 @@ exports.getOrderById = async (req, res) => {
         ],
       });
 
-    if (!order) {
-      return res.status(404).json({
-        success: false,
-        message: "Order not found",
-      });
-    }
+    if (!order) return res.status(404).json({ success: false, message: "Order not found" });
 
-    res.status(200).json({
-      success: true,
-      data: order,
-    });
+    res.status(200).json({ success: true, data: order });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Error fetching order",
-      error: error.message,
-    });
+    res.status(500).json({ success: false, message: "Error fetching order", error: error.message });
   }
 };
 
 // ===============================
-// Update Order
+// Update Order (with workflow sync)
 // ===============================
 exports.updateOrder = async (req, res) => {
   try {
-    const order = await Order.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    });
+    const { status } = req.body;
+    const order = await Order.findById(req.params.id);
 
-    if (!order) {
-      return res.status(404).json({
-        success: false,
-        message: "Order not found",
-      });
+    if (!order) return res.status(404).json({ success: false, message: "Order not found" });
+
+    // If status is being updated, also sync stage fields + tasks
+    if (status) {
+      const now = new Date();
+      switch (status) {
+        case "cutting":
+          order.cuttingStage = { updatedBy: req.user._id, updatedAt: now };
+          await Task.updateMany(
+            { order: order._id, stage: "Cutter", status: { $ne: "done" } },
+            { status: "done", completedAt: now }
+          );
+          break;
+
+        case "handworking":
+          order.handworkStage = { updatedBy: req.user._id, updatedAt: now };
+          await Task.updateMany(
+            { order: order._id, stage: "Handworker", status: { $ne: "done" } },
+            { status: "done", completedAt: now }
+          );
+          break;
+
+        case "tailoring":
+          order.tailoringStage = { updatedBy: req.user._id, updatedAt: now };
+          await Task.updateMany(
+            { order: order._id, stage: "Tailor", status: { $ne: "done" } },
+            { status: "done", completedAt: now }
+          );
+          break;
+
+        case "quality-check":
+          order.qualityCheckStage = { updatedBy: req.user._id, updatedAt: now };
+          break;
+
+        case "ready-to-delivery":
+          order.completedStage = { updatedBy: req.user._id, updatedAt: now };
+          await Task.updateMany(
+            { order: order._id, status: { $ne: "done" } },
+            { status: "done", completedAt: now }
+          );
+          break;
+      }
     }
 
-    res.status(200).json({
-      success: true,
-      message: "Order updated successfully",
-      data: order,
-    });
+    Object.assign(order, req.body);
+    await order.save();
+
+    res.status(200).json({ success: true, message: "Order updated successfully", data: order });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Error updating order",
-      error: error.message,
-    });
+    res.status(500).json({ success: false, message: "Error updating order", error: error.message });
   }
 };
 
@@ -215,23 +207,12 @@ exports.updateOrder = async (req, res) => {
 exports.deleteOrder = async (req, res) => {
   try {
     const order = await Order.findByIdAndDelete(req.params.id);
+    if (!order) return res.status(404).json({ success: false, message: "Order not found" });
 
-    if (!order) {
-      return res.status(404).json({
-        success: false,
-        message: "Order not found",
-      });
-    }
+    await Task.deleteMany({ order: order._id }); // cleanup tasks
 
-    res.status(200).json({
-      success: true,
-      message: "Order deleted successfully",
-    });
+    res.status(200).json({ success: true, message: "Order and related tasks deleted successfully" });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Error deleting order",
-      error: error.message,
-    });
+    res.status(500).json({ success: false, message: "Error deleting order", error: error.message });
   }
 };

@@ -6,8 +6,8 @@ import { assignTask } from "../../api/task";
 import { getMeasurementsByCustomerId } from "../../api/measurement";
 
 const ROLE_MAP = {
-  Tailor: "Tailor",
   Cutter: "Cutter",
+  Tailor: "Tailor",
   Handworker: "Handworker",
 };
 
@@ -16,6 +16,36 @@ const STATUS_COLORS = {
   "In Progress": "bg-blue-100 text-blue-800",
   Completed: "bg-green-100 text-green-800",
   Cancelled: "bg-red-100 text-red-800",
+};
+
+const RoleProgressBar = ({ tasks = [] }) => {
+  const ROLE_ORDER = ["Cutter", "Tailor", "Handworker"];
+
+  return (
+    <div className="flex items-center w-full justify-between">
+      {ROLE_ORDER.map((role, index) => {
+        const task = tasks.find((t) => t.stage === role);
+        const taskStatus = task?.status || "Not Assigned";
+        const isCompleted = taskStatus === "Completed";
+        const isCurrent = taskStatus === "In Progress";
+        const previousTask = tasks.find((t) => t.stage === ROLE_ORDER[index - 1]);
+        const previousTaskCompleted = previousTask?.status === "Completed";
+        const connectorColor = previousTaskCompleted ? "bg-green-500" : "bg-gray-300";
+        const activeColor = isCompleted ? "bg-green-500" : isCurrent ? "bg-blue-500" : "bg-gray-300";
+
+        return (
+          <React.Fragment key={role}>
+            {index > 0 && (
+              <div className={`h-1 flex-1 transition-colors duration-300 ${connectorColor}`}></div>
+            )}
+            <div className={`relative w-8 h-8 rounded-full flex items-center justify-center text-white font-bold transition-colors duration-300 ${activeColor}`}>
+              <span className="text-xs">{index + 1}</span>
+            </div>
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
 };
 
 const AdminTaskManager = () => {
@@ -28,7 +58,6 @@ const AdminTaskManager = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
 
-  // Fetch orders & staff
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -49,7 +78,6 @@ const AdminTaskManager = () => {
     fetchData();
   }, []);
 
-  // Fetch measurements when order is selected
   useEffect(() => {
     const fetchMeasurements = async () => {
       if (selectedOrder?.customer?._id) {
@@ -67,7 +95,6 @@ const AdminTaskManager = () => {
     fetchMeasurements();
   }, [selectedOrder]);
 
-  // Filtered orders
   const filteredOrders = orders.filter((order) => {
     const searchLower = searchTerm.toLowerCase();
     const matchesSearch =
@@ -84,7 +111,6 @@ const AdminTaskManager = () => {
     return matchesSearch && matchesStatus;
   });
 
-  // Assign task
   const handleAssign = async (role) => {
     const workerData = selectedWorkers[role];
     const currentTask = selectedOrder?.tasks?.find((t) => t.stage === role);
@@ -107,7 +133,6 @@ const AdminTaskManager = () => {
 
       alert(`${role} task assigned successfully ✅`);
 
-      // Refresh orders
       const orderData = await getOrders();
       setOrders(orderData.data || orderData);
 
@@ -122,7 +147,6 @@ const AdminTaskManager = () => {
     }
   };
 
-  // Role Assignment Card
   const RoleAssignmentCard = ({ role, label }) => {
     const currentTask = selectedOrder?.tasks?.find((t) => t.stage === role);
     const assignedStaff = currentTask?.assignedTo?._id || "";
@@ -149,7 +173,6 @@ const AdminTaskManager = () => {
         </div>
 
         <div className="space-y-4">
-          {/* Worker Selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Select Worker
@@ -178,7 +201,6 @@ const AdminTaskManager = () => {
             </select>
           </div>
 
-          {/* Deadline */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Deadline
@@ -196,7 +218,6 @@ const AdminTaskManager = () => {
             />
           </div>
 
-          {/* Current Assignment */}
           {currentTask && (
             <div className="bg-gray-50 rounded-lg p-3">
               <p className="text-sm text-gray-600">
@@ -212,7 +233,6 @@ const AdminTaskManager = () => {
             </div>
           )}
 
-          {/* Action Button */}
           <button
             onClick={() => handleAssign(role)}
             className={`w-full py-2 px-4 rounded-lg font-medium transition-colors ${
@@ -239,7 +259,6 @@ const AdminTaskManager = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Task Management Center
@@ -249,10 +268,8 @@ const AdminTaskManager = () => {
           </p>
         </div>
 
-        {/* Orders List View */}
         {!selectedOrder ? (
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-            {/* Filters */}
             <div className="p-6 border-b border-gray-200">
               <div className="flex flex-col sm:flex-row gap-4">
                 <div className="flex-1">
@@ -279,9 +296,8 @@ const AdminTaskManager = () => {
               </div>
             </div>
 
-            {/* Orders Table */}
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="min-w-full">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase">
@@ -309,8 +325,6 @@ const AdminTaskManager = () => {
                     filteredOrders.map((order) => {
                       const tasksAssigned = order.tasks?.length || 0;
                       const totalTasks = Object.keys(ROLE_MAP).length;
-                      const progressPercentage =
-                        (tasksAssigned / totalTasks) * 100;
 
                       return (
                         <tr
@@ -350,18 +364,8 @@ const AdminTaskManager = () => {
                               {order.status}
                             </span>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
-                                <div
-                                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                                  style={{ width: `${progressPercentage}%` }}
-                                ></div>
-                              </div>
-                              <span className="text-xs text-gray-600">
-                                {tasksAssigned}/{totalTasks}
-                              </span>
-                            </div>
+                          <td className="px-6 py-4">
+                            <RoleProgressBar tasks={order.tasks} />
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <button
@@ -396,7 +400,6 @@ const AdminTaskManager = () => {
           </div>
         ) : (
           <div className="space-y-6">
-            {/* Selected Order Header */}
             <div className="bg-white rounded-xl shadow-sm p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -425,14 +428,12 @@ const AdminTaskManager = () => {
               </div>
             </div>
 
-            {/* Role Assignment */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {Object.entries(ROLE_MAP).map(([key, label]) => (
                 <RoleAssignmentCard key={key} role={key} label={label} />
               ))}
             </div>
 
-            {/* Task Summary */}
             <div className="bg-white rounded-xl shadow-sm overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-200">
                 <h3 className="text-lg font-semibold text-gray-900">
@@ -491,17 +492,6 @@ const AdminTaskManager = () => {
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            {/* {task?.assignedBy? */}
-
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              task ? STATUS_COLORS[task.status] || "bg-gray-100 text-gray-800" : "bg-gray-100 text-gray-600"
-                            }`}>
-                              {task?.status || "Not Assigned"}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
                             <span className="text-sm text-gray-900">
                               {task?.assignedBy?.name || "-"}
                             </span>
@@ -514,7 +504,6 @@ const AdminTaskManager = () => {
               </div>
             </div>
 
-            {/* Customer Measurements */}
             <div className="bg-white rounded-xl shadow-sm overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-200">
                 <h3 className="text-lg font-semibold text-gray-900">Customer Measurements</h3>

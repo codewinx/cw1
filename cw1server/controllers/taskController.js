@@ -2,6 +2,7 @@ const Task = require("../models/Task");
 const Order = require("../models/Order");
 
 // ✅ Assign or Re-Assign Task
+// ✅ Assign or Re-Assign Task
 exports.assignTask = async (req, res) => {
   try {
     const { orderId, stage, staffId, deadline, remarks } = req.body;
@@ -14,22 +15,41 @@ exports.assignTask = async (req, res) => {
     if (!order) return res.status(404).json({ message: "Order not found" });
 
     // Check if task already exists for this stage
-    let task = order.tasks.find((t) => t.stage === stage);
+    let existingTask = order.tasks.find((t) => t.stage === stage);
 
-    if (task) {
-      // ✅ Reassign case
-      task = await Task.findById(task._id);
-      task.assignedTo = staffId;
-      task.deadline = deadline;
-      task.remarks = remarks;
-      task.history.push({
+    if (existingTask) {
+      // ✅ Mark old task as "reassigned"
+      const oldTask = await Task.findById(existingTask._id);
+      oldTask.status = "reassigned";   // <-- add this status in schema enum
+      oldTask.history.push({
         action: "reassigned",
         by: req.user._id,
         to: staffId,
         note: remarks,
       });
-      await task.save();
-      return res.json({ success: true, message: "Task reassigned successfully", task });
+      await oldTask.save();
+
+      // ✅ Create new reassigned task
+      const newTask = await Task.create({
+        order: orderId,
+        stage,
+        assignedTo: staffId,
+        assignedBy: req.user._id,
+        deadline,
+        remarks,
+        history: [
+          { action: "assigned (reassign)", by: req.user._id, to: staffId, note: remarks },
+        ],
+      });
+
+      order.tasks.push(newTask._id);
+      await order.save();
+
+      return res.json({
+        success: true,
+        message: "Task reassigned successfully (new task created)",
+        task: newTask,
+      });
     } else {
       // ✅ First time assignment
       const newTask = await Task.create({
@@ -58,6 +78,7 @@ exports.assignTask = async (req, res) => {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
+
 
 // ✅ Get all tasks (Admin/Manager)
 exports.getAllTasks = async (req, res) => {
@@ -88,14 +109,17 @@ exports.getTasksByStaff = async (req, res) => {
 };
 
 // ✅ Update task status
+// ✅ Update task status
+// ✅ Update task status
 exports.updateTaskStatus = async (req, res) => {
   try {
     const { taskId } = req.params;
     const { status, remarks } = req.body;
 
-    const task = await Task.findById(taskId);
+    const task = await Task.findById(taskId).populate("order");
     if (!task) return res.status(404).json({ error: "Task not found" });
 
+    // 🔄 Update Task fields
     task.status = status;
     if (status === "in-progress" && !task.startedAt) {
       task.startedAt = new Date();
@@ -103,21 +127,32 @@ exports.updateTaskStatus = async (req, res) => {
     if (status === "done") {
       task.completedAt = new Date();
     }
+    if (remarks) {
+      task.remarks = remarks;
+    }
 
-    if (remarks) task.remarks = remarks;
-
+    // Add to history
     task.history.push({
       action: "status-change",
       by: req.user ? req.user._id : null,
       note: remarks,
     });
 
-    await task.save();
-    res.json({ message: "Task updated successfully", task });
+    await task.save(); // 🔥 post-save hook will update order status
+
+    res.json({
+      success: true,
+      message: "Task updated successfully",
+      task,
+      orderStatus: task.order?.status, // may reflect old status until hook finishes
+    });
   } catch (err) {
+    console.error("Error updating task status:", err);
     res.status(500).json({ error: err.message });
   }
 };
+
+
 
 // ✅ Delete task
 exports.deleteTask = async (req, res) => {
