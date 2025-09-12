@@ -1,17 +1,17 @@
 import React from "react";
 
-const ManagerTask = () => {
+const ManagerReassignTasks = () => {
   // Dummy data – replace with API later
   const tasks = [
-    { id: 1, orderNumber: "#201", stage: "Cutting", assignedTo: "John", status: "In Progress" },
-    { id: 2, orderNumber: "#202", stage: "Tailoring", assignedTo: "Alice", status: "Pending" },
-    { id: 3, orderNumber: "#203", stage: "Handworker", assignedTo: "Bob", status: "Completed" },
+    { id: 1, orderNumber: "#101", stage: "Cutting", assignedTo: "John", status: "In Progress" },
+    { id: 2, orderNumber: "#102", stage: "Tailoring", assignedTo: "Alice", status: "Pending" },
+    { id: 3, orderNumber: "#103", stage: "Handworker", assignedTo: "Bob", status: "In Progress" },
   ];
 
   return (
     <div className="p-4 sm:p-8 bg-gray-50 min-h-screen">
       <h1 className="text-2xl sm:text-3xl font-extrabold mb-6 text-center sm:text-left text-gray-800">
-        Tasks
+        Reassign Tasks
       </h1>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -30,16 +30,21 @@ const ManagerTask = () => {
               </p>
               <p
                 className={`mt-2 font-bold ${
-                  task.status === "Completed"
-                    ? "text-green-600"
+                  task.status === "In Progress"
+                    ? "text-yellow-600"
                     : task.status === "Pending"
                     ? "text-red-500"
-                    : "text-yellow-600"
+                    : "text-green-600"
                 }`}
               >
                 {task.status}
               </p>
             </div>
+
+            {/* Reassign button */}
+            <button className="mt-4 bg-pink-500 hover:bg-rose-600 text-white font-semibold py-2 px-4 rounded-xl transition-colors">
+              Reassign
+            </button>
           </div>
         ))}
       </div>
@@ -47,4 +52,4 @@ const ManagerTask = () => {
   );
 };
 
-export default ManagerTask;
+export default ManagerReassignTasks;
