@@ -4,28 +4,75 @@ const generateToken = require("../utils/generateToken");
 const jwt = require("jsonwebtoken");
 const Task = require("../models/Task");
 
-exports.getCutterTasks = async (req, res) => {
+// exports.getManagerTasks = async (req, res) => {
+//   try {
+//     const tasks = await Task.find()
+//       .populate({
+//         path: "order",
+//         populate: {
+//           path: "measurement",   // populate measurement inside order
+//           model: "Measurement"
+//         }
+//       })
+//       .populate("assignedTo"); // populate assigned staff details
+
+//     res.json({ tasks });
+//   } catch (err) {
+//     console.error("Error fetching tailor tasks:", err);
+//     res.status(500).json({ error: "Server error while fetching tasks" });
+//   }
+// };
+exports.getManagerTasks = async (req, res) => {
   try {
-    // Cutter ID can come from JWT auth or from params/query
-    const cutterId = req.user?._id || req.params.cutterId;
+    // ✅ get manager id from logged-in user
+    const managerId = req.user._id;
 
-    if (!cutterId) {
-      return res.status(400).json({ error: "Cutter ID is required" });
-    }
-
-    const tasks = await Task.find({ assignedTo: cutterId })  // ✅ Only fetch tasks for this cutter
+    // ✅ fetch only tasks created/assigned by this manager
+    const tasks = await Task.find({ assignedTo: managerId })
       .populate({
         path: "order",
         populate: {
-          path: "measurement",
-          model: "Measurement",
-        },
+          path: "measurement",   // populate measurement inside order
+          model: "Measurement"
+        }
       })
       .populate("assignedTo"); // populate assigned staff details
 
     res.json({ tasks });
   } catch (err) {
-    console.error("Error fetching cutter tasks:", err);
+    console.error("Error fetching manager tasks:", err);
     res.status(500).json({ error: "Server error while fetching tasks" });
+  }
+};
+
+exports.updateTaskStatus = async (req, res) => {
+  try {
+    const { taskId } = req.params;
+    const { status } = req.body; // "pending" | "in-progress" | "done"
+
+    // Validate
+    if (!["pending", "in-progress", "done"].includes(status)) {
+      return res.status(400).json({ error: "Invalid status" });
+    }
+
+    const updateFields = { status };
+
+    if (status === "in-progress") {
+      updateFields.startedAt = new Date();
+    } else if (status === "done") {
+      updateFields.completedAt = new Date();
+    }
+
+    const task = await Task.findByIdAndUpdate(taskId, updateFields, { new: true })
+      .populate("order", "orderNumber deliveryDate")
+      .populate("assignedTo", "name role");
+
+    if (!task) {
+      return res.status(404).json({ error: "Task not found" });
+    }
+
+    res.json(task);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to update task status" });
   }
 };
