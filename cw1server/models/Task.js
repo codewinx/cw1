@@ -20,6 +20,8 @@ const taskSchema = new mongoose.Schema(
     remarks: String,
     startedAt: Date,
     completedAt: Date,
+    isReassigned: { type: Boolean, default: false },
+    wasReassigned: { type: Boolean, default: false },
     history: [
       {
         action: String,

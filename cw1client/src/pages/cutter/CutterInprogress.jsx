@@ -9,35 +9,40 @@ const InProgressTasks = () => {
   const [searchTerm, setSearchTerm] = useState("");
 
   const fetchTasks = async () => {
-    try {
-      const data = await getTasks();
-      const allTasks = Array.isArray(data) ? data : data.tasks || [];
-      const inProgress = allTasks.filter((t) => t.status === "in-progress");
-      setTasks(inProgress);
-      setFilteredTasks(inProgress);
-      setLoading(false);
-    } catch (err) {
-      console.error("Error fetching tasks:", err);
-      setTasks([]);
-      setFilteredTasks([]);
-      setLoading(false);
-    }
-  };
+  try {
+    const data = await getTasks();
+
+    // ✅ Include all in-progress tasks
+    let inProgress = Array.isArray(data.inProgress) ? data.inProgress : [];
+
+    // ✅ Optional: sort or filter if needed
+    setTasks(inProgress);
+    setFilteredTasks(inProgress);
+    setLoading(false);
+  } catch (err) {
+    console.error("Error fetching tasks:", err);
+    setTasks([]);
+    setFilteredTasks([]);
+    setLoading(false);
+  }
+};
+
 
   useEffect(() => {
     fetchTasks();
   }, []);
 
-  // Search by Order No
+  // 🔎 Search by order number
   useEffect(() => {
     if (!searchTerm) {
       setFilteredTasks(tasks);
       return;
     }
-    const temp = tasks.filter((task) =>
-      task.order?.orderNo?.toString().includes(searchTerm)
+    setFilteredTasks(
+      tasks.filter((task) =>
+        task.order?.orderNo?.toString().includes(searchTerm)
+      )
     );
-    setFilteredTasks(temp);
   }, [searchTerm, tasks]);
 
   const handleSelectChange = (taskId, value) => {
@@ -51,8 +56,19 @@ const InProgressTasks = () => {
     try {
       const status = statusUpdates[taskId];
       if (!status) return;
+
       await updateStaff(taskId, { status });
-      fetchTasks();
+
+      // ✅ Remove task locally after updating
+      setTasks((prev) => prev.filter((t) => t._id !== taskId));
+      setFilteredTasks((prev) => prev.filter((t) => t._id !== taskId));
+
+      // ✅ Clear local status update
+      setStatusUpdates((prev) => {
+        const updated = { ...prev };
+        delete updated[taskId];
+        return updated;
+      });
     } catch (err) {
       console.error("Error saving status:", err);
     }
@@ -90,15 +106,23 @@ const InProgressTasks = () => {
         />
       </div>
 
-      {/* Responsive Cards */}
+      {/* Task Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {filteredTasks.map((task) => (
           <div
             key={task._id}
             className="border rounded-lg shadow-md bg-white hover:shadow-lg transition overflow-hidden"
           >
+            {/* Header */}
             <div className="bg-gradient-to-r from-pink-500 to-pink-700 text-white px-4 py-2 flex justify-between items-center">
-              <h3 className="font-bold text-base">Order #{task.order?.orderNo || "N/A"}</h3>
+              <h3 className="font-bold text-base flex items-center gap-2">
+                Order #{task.order?.orderNo || "N/A"}
+                {task.wasReassigned && (
+                  <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 text-xs font-semibold">
+                    Reassigned
+                  </span>
+                )}
+              </h3>
               <span
                 className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getStatusBadge(
                   task.status
@@ -108,6 +132,7 @@ const InProgressTasks = () => {
               </span>
             </div>
 
+            {/* Task Details */}
             <div className="divide-y text-sm">
               <div className="px-4 py-3 flex justify-between items-center">
                 <span className="font-medium text-gray-600">Service</span>
@@ -117,14 +142,16 @@ const InProgressTasks = () => {
               <div className="px-4 py-3 flex justify-between items-center">
                 <span className="font-medium text-gray-600">Expected</span>
                 <span className="text-gray-800">
-                  {task.order?.expectedDate
-                    ? new Date(task.order.expectedDate).toDateString()
+                  {task.latestDeadline
+                    ? new Date(task.latestDeadline).toDateString()
                     : "N/A"}
                 </span>
               </div>
 
               <div className="px-4 py-3">
-                <span className="font-medium text-gray-600 block mb-1">Measurements</span>
+                <span className="font-medium text-gray-600 block mb-1">
+                  Measurements
+                </span>
                 {task.order?.measurement?.length > 0 ? (
                   <ul className="list-disc ml-5 text-gray-700 text-xs">
                     {task.order.measurement.map((m) => (

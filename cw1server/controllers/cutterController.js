@@ -26,28 +26,64 @@ exports.getCurrentStaff = async (req, res) => {
 
 
 // controllers/cutterController.js
-
-
 exports.getCutterTasks = async (req, res) => {
   try {
-    // Cutter ID can come from JWT auth or from params/query
     const cutterId = req.user?._id || req.params.cutterId;
 
     if (!cutterId) {
       return res.status(400).json({ error: "Cutter ID is required" });
     }
 
-    const tasks = await Task.find({ assignedTo: cutterId })  // ✅ Only fetch tasks for this cutter
+    const tasks = await Task.find({
+      $or: [{ assignedTo: cutterId }, { "history.to": cutterId }],
+    })
       .populate({
         path: "order",
-        populate: {
-          path: "measurement",
-          model: "Measurement",
-        },
+        populate: { path: "measurement", model: "Measurement" },
       })
-      .populate("assignedTo"); // populate assigned staff details
+      .populate("assignedTo")
+      .populate("history.by")
+      .populate("history.to");
 
-    res.json({ tasks });
+    const mappedTasks = tasks.map((t) => {
+      // check if this task was reassigned to this cutter
+      const wasReassigned = t.history.some(
+        (h) =>
+          h.action === "reassigned" &&
+          h.to?._id.toString() === cutterId.toString()
+      );
+
+      const latestDeadline = t.deadline || t.order?.expectedDate;
+
+      return {
+        ...t.toObject(),
+        isReassigned: wasReassigned,
+        latestDeadline,
+      };
+    });
+
+    // ✅ Pending
+    const pending = mappedTasks.filter(
+      (t) => t.status === "pending" && !t.isReassigned && !t.wasReassigned
+    );
+
+    // ✅ In Progress
+    const inProgress = mappedTasks.filter(
+      (t) => t.status === "in-progress" && !t.isReassigned
+    );
+
+    // ✅ Completed (includes tasks that were reassigned but finished)
+    const completed = mappedTasks.filter((t) => t.status === "done");
+
+    // ✅ Reassigned (only if not completed yet)
+    const reassigned = mappedTasks.filter(
+      (t) =>
+        t.isReassigned &&
+        t.status !== "done" &&
+        t.assignedTo?._id.toString() === cutterId.toString()
+    );
+
+    res.json({ pending, inProgress, completed, reassigned });
   } catch (err) {
     console.error("Error fetching cutter tasks:", err);
     res.status(500).json({ error: "Server error while fetching tasks" });
@@ -55,17 +91,33 @@ exports.getCutterTasks = async (req, res) => {
 };
 
 
+
+
+
+
+
 exports.updateTaskStatus = async (req, res) => {
   try {
     const { taskId } = req.params;
-    const { status } = req.body; // "pending" | "in-progress" | "done"
+    const { status } = req.body;
+    const userId = req.user?._id;
 
-    // Validate
+    // Validate status
     if (!["pending", "in-progress", "done"].includes(status)) {
       return res.status(400).json({ error: "Invalid status" });
     }
 
-    const updateFields = { status };
+    // Find task
+    const task = await Task.findById(taskId)
+      .populate("order", "orderNo expectedDate")
+      .populate("assignedTo", "name role");
+
+    if (!task) {
+      return res.status(404).json({ error: "Task not found" });
+    }
+
+    // Prepare update fields
+    const updateFields = { status, wasAssigned: true };
 
     if (status === "in-progress") {
       updateFields.startedAt = new Date();
@@ -73,16 +125,27 @@ exports.updateTaskStatus = async (req, res) => {
       updateFields.completedAt = new Date();
     }
 
-    const task = await Task.findByIdAndUpdate(taskId, updateFields, { new: true })
-      .populate("order", "orderNumber deliveryDate")
-      .populate("assignedTo", "name role");
-
-    if (!task) {
-      return res.status(404).json({ error: "Task not found" });
+    // Clear isReassigned if task is being acted on
+    if (task.isReassigned && ["in-progress", "done"].includes(status)) {
+      updateFields.isReassigned = false;
     }
 
-    res.json(task);
+    // Update task
+    const updatedTask = await Task.findByIdAndUpdate(taskId, updateFields, { new: true });
+
+    // Push into history
+    updatedTask.history.push({
+      action: `status-updated to ${status}`,
+      by: userId,
+      to: task.assignedTo._id,
+      at: new Date(),
+    });
+
+    await updatedTask.save();
+
+    res.json({ message: "Task status updated successfully", task: updatedTask });
   } catch (error) {
+    console.error("Error updating task status:", error);
     res.status(500).json({ error: "Failed to update task status" });
   }
 };

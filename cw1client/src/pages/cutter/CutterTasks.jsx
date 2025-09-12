@@ -8,25 +8,30 @@ const CurrentTasks = () => {
   const [statusUpdates, setStatusUpdates] = useState({});
   const [searchTerm, setSearchTerm] = useState("");
 
-  const fetchTasks = async () => {
-    try {
-      const data = await getTasks();
-      let tasksArray = [];
+ const fetchTasks = async () => {
+  try {
+    const data = await getTasks();
 
-      if (Array.isArray(data)) tasksArray = data;
-      else if (Array.isArray(data.tasks)) tasksArray = data.tasks;
+    // ✅ Use only backend's inProgress array
+    let pendingTasks = Array.isArray(data?.pending) ? data.pending : [];
 
-      const pendingTasks = tasksArray.filter((task) => task.status === "pending");
-      setTasks(pendingTasks);
-      setFilteredTasks(pendingTasks);
-      setLoading(false);
-    } catch (err) {
-      console.error("Error fetching tasks:", err);
-      setTasks([]);
-      setFilteredTasks([]);
-      setLoading(false);
-    }
-  };
+    // ✅ Safety filter to exclude reassigned tasks (like pending logic)
+    pendingTasks = pendingTasks.filter(
+      (task) => !task.wasReassigned && !task.isReassigned
+    );
+
+    setTasks(pendingTasks);
+    setFilteredTasks(pendingTasks);
+    setLoading(false);
+  } catch (err) {
+    console.error("Error fetching tasks:", err);
+    setTasks([]);
+    setFilteredTasks([]);
+    setLoading(false);
+  }
+};
+
+
 
   useEffect(() => {
     fetchTasks();
@@ -37,7 +42,6 @@ const CurrentTasks = () => {
       setFilteredTasks(tasks);
       return;
     }
-
     const temp = tasks.filter((task) =>
       task.order?.orderNo?.toString().includes(searchTerm)
     );
@@ -57,6 +61,8 @@ const CurrentTasks = () => {
       if (!status) return;
 
       await updateStaff(taskId, { status });
+
+      // remove from pending after update
       const updatedTasks = tasks.filter((task) => task._id !== taskId);
       setTasks(updatedTasks);
       setFilteredTasks(updatedTasks);
@@ -69,10 +75,6 @@ const CurrentTasks = () => {
     switch (status) {
       case "pending":
         return "bg-red-100 text-red-700";
-      case "in-progress":
-        return "bg-yellow-100 text-yellow-700";
-      case "done":
-        return "bg-green-100 text-green-700";
       default:
         return "bg-gray-100 text-gray-700";
     }
@@ -80,11 +82,11 @@ const CurrentTasks = () => {
 
   if (loading) return <p className="text-center mt-6">Loading tasks...</p>;
   if (!filteredTasks.length)
-    return <p className="text-center mt-6 text-gray-500">No tasks found.</p>;
+    return <p className="text-center mt-6 text-gray-500">No pending tasks found.</p>;
 
   return (
     <div className="p-2">
-      <h2 className="text-2xl font-bold mb-4 text-gray-800">Current Tasks</h2>
+      <h2 className="text-2xl font-bold mb-4 text-gray-800">Pending Tasks</h2>
 
       {/* Search Bar */}
       <div className="mb-4">
@@ -106,7 +108,9 @@ const CurrentTasks = () => {
           >
             {/* Header */}
             <div className="bg-gradient-to-r from-pink-500 to-pink-700 text-white px-4 py-2 flex justify-between items-center">
-              <h3 className="font-bold text-base">Order #{task.order?.orderNo || "N/A"}</h3>
+              <h3 className="font-bold text-base">
+                Order #{task.order?.orderNo || "N/A"}
+              </h3>
               <span
                 className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getStatusBadge(
                   task.status
@@ -120,7 +124,9 @@ const CurrentTasks = () => {
             <div className="divide-y text-sm">
               <div className="px-4 py-3 flex justify-between items-center">
                 <span className="font-medium text-gray-600">Service</span>
-                <span className="text-gray-800">{task.order?.service || "N/A"}</span>
+                <span className="text-gray-800">
+                  {task.order?.service || "N/A"}
+                </span>
               </div>
 
               <div className="px-4 py-3 flex justify-between items-center">
@@ -132,10 +138,12 @@ const CurrentTasks = () => {
                 </span>
               </div>
 
-              {/* Measurements + Status inline on mobile */}
+              {/* Measurements */}
               <div className="px-4 py-3 flex flex-col sm:flex-row sm:justify-between gap-4">
                 <div className="flex-1 min-w-[50%]">
-                  <span className="font-medium text-gray-600 block mb-1">Measurements</span>
+                  <span className="font-medium text-gray-600 block mb-1">
+                    Measurements
+                  </span>
                   {task.order?.measurement?.length > 0 ? (
                     <ul className="list-disc ml-5 text-gray-700 text-xs">
                       {task.order.measurement.map((m) => (

@@ -1,18 +1,17 @@
 import React, { useEffect, useState } from "react";
-import { getTasks, updateStaff } from "../../api/cutter";
+import { getTasks} from "../../api/cutter";
 
 const CompletedTasks = () => {
   const [tasks, setTasks] = useState([]);
   const [filteredTasks, setFilteredTasks] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [statusUpdates, setStatusUpdates] = useState({});
   const [searchTerm, setSearchTerm] = useState("");
 
+  // Fetch completed tasks
   const fetchTasks = async () => {
     try {
       const data = await getTasks();
-      const allTasks = Array.isArray(data) ? data : data.tasks || [];
-      const doneTasks = allTasks.filter((t) => t.status === "done");
+      const doneTasks = Array.isArray(data.completed) ? data.completed : [];
       setTasks(doneTasks);
       setFilteredTasks(doneTasks);
       setLoading(false);
@@ -28,41 +27,20 @@ const CompletedTasks = () => {
     fetchTasks();
   }, []);
 
-  // Search by Order No
+  // Search by order number
   useEffect(() => {
     if (!searchTerm) {
       setFilteredTasks(tasks);
       return;
     }
-    const temp = tasks.filter((task) =>
-      task.order?.orderNo?.toString().includes(searchTerm)
+    setFilteredTasks(
+      tasks.filter((task) =>
+        task.order?.orderNo?.toString().includes(searchTerm)
+      )
     );
-    setFilteredTasks(temp);
   }, [searchTerm, tasks]);
 
-  const handleSelectChange = (taskId, value) => {
-    setStatusUpdates((prev) => ({
-      ...prev,
-      [taskId]: value,
-    }));
-  };
-
-  const handleSaveStatus = async (taskId) => {
-    try {
-      const status = statusUpdates[taskId];
-      if (!status) return;
-      await updateStaff(taskId, { status });
-      setStatusUpdates((prev) => {
-        const updated = { ...prev };
-        delete updated[taskId];
-        return updated;
-      });
-      fetchTasks();
-    } catch (err) {
-      console.error("Error saving status:", err);
-    }
-  };
-
+  // Badge colors
   const getStatusBadge = (status) => {
     switch (status) {
       case "pending":
@@ -76,9 +54,15 @@ const CompletedTasks = () => {
     }
   };
 
-  if (loading) return <p className="text-center mt-6">Loading tasks...</p>;
+  if (loading)
+    return <p className="text-center mt-6">Loading tasks...</p>;
+
   if (!filteredTasks.length)
-    return <p className="text-center mt-6 text-gray-500">No completed tasks found.</p>;
+    return (
+      <p className="text-center mt-6 text-gray-500">
+        No completed tasks found.
+      </p>
+    );
 
   return (
     <div className="p-2">
@@ -95,16 +79,24 @@ const CompletedTasks = () => {
         />
       </div>
 
-      {/* Responsive Cards */}
+      {/* Task Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {filteredTasks.map((task) => (
           <div
             key={task._id}
             className="border rounded-lg shadow-md bg-white hover:shadow-lg transition overflow-hidden"
           >
-            {/* Header */}
+            {/* Card Header */}
             <div className="bg-gradient-to-r from-pink-500 to-pink-700 text-white px-4 py-2 flex justify-between items-center">
-              <h3 className="font-bold text-base">Order #{task.order?.orderNo || "N/A"}</h3>
+              <h3 className="font-bold text-base flex items-center gap-2">
+                Order #{task.order?.orderNo || "N/A"}
+                {task.wasReassigned && (
+                  <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 text-xs font-semibold">
+                    Reassigned
+                  </span>
+                )}
+              </h3>
+
               <span
                 className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getStatusBadge(
                   task.status
@@ -114,24 +106,33 @@ const CompletedTasks = () => {
               </span>
             </div>
 
-            {/* Task Details */}
+            {/* Card Details */}
             <div className="divide-y text-sm">
+              {/* Service */}
               <div className="px-4 py-3 flex justify-between items-center">
                 <span className="font-medium text-gray-600">Service</span>
-                <span className="text-gray-800">{task.order?.service || "N/A"}</span>
+                <span className="text-gray-800">
+                  {task.order?.service || "N/A"}
+                </span>
               </div>
 
+              {/* Expected / Deadline */}
               <div className="px-4 py-3 flex justify-between items-center">
                 <span className="font-medium text-gray-600">Expected</span>
                 <span className="text-gray-800">
-                  {task.order?.expectedDate
+                  {task.wasReassigned && task.deadline
+                    ? new Date(task.deadline).toDateString()
+                    : task.order?.expectedDate
                     ? new Date(task.order.expectedDate).toDateString()
                     : "N/A"}
                 </span>
               </div>
 
+              {/* Measurements */}
               <div className="px-4 py-3">
-                <span className="font-medium text-gray-600 block mb-1">Measurements</span>
+                <span className="font-medium text-gray-600 block mb-1">
+                  Measurements
+                </span>
                 {task.order?.measurement?.length > 0 ? (
                   <ul className="list-disc ml-5 text-gray-700 text-xs">
                     {task.order.measurement.map((m) => (
@@ -143,30 +144,6 @@ const CompletedTasks = () => {
                   </ul>
                 ) : (
                   <span className="text-gray-400">N/A</span>
-                )}
-              </div>
-
-              {/* Controls */}
-              <div className="px-4 py-3 flex items-center gap-2">
-                <select
-                  value={statusUpdates[task._id] || ""}
-                  onChange={(e) => handleSelectChange(task._id, e.target.value)}
-                  className="border border-gray-300 px-2 py-1 rounded w-full text-sm focus:outline-none focus:ring-2 focus:ring-pink-400 shadow-sm"
-                >
-                  <option value="" disabled>
-                    Update Status
-                  </option>
-                  <option value="pending">Pending</option>
-                  <option value="in-progress">In Progress</option>
-                </select>
-
-                {statusUpdates[task._id] && (
-                  <button
-                    onClick={() => handleSaveStatus(task._id)}
-                    className="bg-pink-600 text-white px-4 py-1 rounded hover:bg-pink-700 shadow-sm transition"
-                  >
-                    Save
-                  </button>
                 )}
               </div>
             </div>
