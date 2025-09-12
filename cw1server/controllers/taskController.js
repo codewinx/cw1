@@ -20,7 +20,8 @@ exports.assignTask = async (req, res) => {
     if (existingTask) {
       // ✅ Mark old task as "reassigned"
       const oldTask = await Task.findById(existingTask._id);
-      oldTask.status = "reassigned";   // <-- add this status in schema enum
+      oldTask.status = "reassigned"; 
+      oldTask.wasReassigned = true;   // <-- add this status in schema enum
       oldTask.history.push({
         action: "reassigned",
         by: req.user._id,
@@ -37,6 +38,7 @@ exports.assignTask = async (req, res) => {
         assignedBy: req.user._id,
         deadline,
         remarks,
+        isReassigned: true,
         history: [
           { action: "assigned (reassign)", by: req.user._id, to: staffId, note: remarks },
         ],
