@@ -37,17 +37,17 @@ export default function HandworkerSidebar({ open, setOpen }) {
           </div>
 
           {/* Logo / Branding */}
-          <div className="p-3 flex justify-end items-center border-b border-pink-200/40 -mt-2">
+          <div className="hidden lg:block p-4 flex justify-center">
             <img
-            src={logo}
-            alt="Her Hiness Logo"
-            className="w-45 h-auto object-contain transform hover:scale-105 transition-transform duration-300"
+              src={logo}
+              alt="Her Hiness Logo"
+              className="hidden lg:block  w-80 h-32 ml-8 object-cover rounded" 
+              
             />
           </div>
 
-
           {/* Navigation */}
-         <nav className="-mt-8 px-3 flex-1">
+          <nav className="-mt-8 px-3 flex-1">
             {menuItems.map(({ icon: Icon, label, path }) => (
               <NavLink
                 key={path}
