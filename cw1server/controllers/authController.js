@@ -189,10 +189,64 @@ const deleteStaff = async (req, res) => {
   }
 };
 
+
+
+const Order = require("../models/Order");
+
+// 📊 Get order counts by status
+const getOrderStats = async (req, res) => {
+  try {
+    // Aggregate counts grouped by status
+    const stats = await Order.aggregate([
+      {
+        $group: {
+          _id: "$status",
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    // Convert aggregation result into structured object
+    const result = {
+      placed: 0,
+      cutting: 0,
+      handworking: 0,
+      tailoring: 0,
+      "quality-check": 0,
+      "ready-to-delivery": 0,
+    };
+
+    stats.forEach((item) => {
+      result[item._id] = item.count;
+    });
+
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    console.error("Error fetching order stats:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+    });
+  }
+};
+
+
+
+
+
+
+
+
+
 module.exports = {
   registerStaff,
   loginStaff,
   getAllStaff,
   updateStaff,
   deleteStaff,
+  getOrderStats,
+
 };

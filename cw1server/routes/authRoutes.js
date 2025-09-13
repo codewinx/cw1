@@ -7,10 +7,12 @@ const {
   getAllStaff,
   updateStaff,
   deleteStaff,
+  getOrderStats,
 } = require("../controllers/authController");
 
 const { protect, authorize } = require("../middleware/authMiddleware");
 const { uploadProfileImage } = require("../middleware/upload");
+
 
 // =============================
 // Auth Routes for Staff
@@ -52,5 +54,11 @@ router.put(
 
 // ❌ Delete staff (Admin only)
 router.delete("/staff/:id", protect, authorize("admin"), deleteStaff);
+
+// // GET /api/tasks/grouped
+// router.get("/grouped", protect, authorize("admin"), getTasksGroupedByStage);
+
+// GET /api/orders/stats
+router.get("/stats", protect, authorize("admin"), getOrderStats);
 
 module.exports = router;
