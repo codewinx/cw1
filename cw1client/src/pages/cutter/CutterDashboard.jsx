@@ -67,11 +67,7 @@ const CutterDashboard = () => {
     { label: "Pending Tasks", count: taskCounts.pending, color: badgeColors.pending },
     { label: "In Progress Tasks", count: taskCounts.inProgress, color: badgeColors.inProgress },
     { label: "Completed Tasks", count: taskCounts.done, color: badgeColors.done },
-    { 
-      label: "Reassigned Tasks",
-      count: `In Progress: ${taskCounts.reassigned.inProgress} | Done: ${taskCounts.reassigned.done}`,
-      color: badgeColors.reassigned,
-    },
+    { label: "Reassigned Tasks", count: taskCounts.reassigned.reassigned ,color: badgeColors.reassigned },
   ];
 
   return (

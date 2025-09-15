@@ -108,10 +108,13 @@ exports.updateTaskStatus = async (req, res) => {
       updateFields.completedAt = new Date();
     }
 
-    // ✅ Preserve reassigned flag
-    if (task.isReassigned) {
-      updateFields.isReassigned = true;
-    }
+  // Don't kill the reassigned history
+if (task.isReassigned && ["in-progress", "done"].includes(status)) {
+  updateFields.isReassigned = false;     // ✅ so it's not shown in Reassigned page anymore
+  updateFields.wasReassigned = true;     // ✅ keep a history flag (new field in schema!)
+}
+
+
 
     // Update task
     const updatedTask = await Task.findByIdAndUpdate(taskId, updateFields, { new: true });
