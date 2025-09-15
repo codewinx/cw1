@@ -8,21 +8,20 @@ const CutterReassign = () => {
   const [statusUpdates, setStatusUpdates] = useState({});
   const [searchTerm, setSearchTerm] = useState("");
 
- const fetchTasks = async () => {
-  try {
-    const data = await getTasks();
-    const reassigned = data?.reassigned || []; // ✅ backend already gives reassigned tasks
-    setTasks(reassigned);
-    setFilteredTasks(reassigned);
-    setLoading(false);
-  } catch (err) {
-    console.error("Error fetching reassigned tasks:", err);
-    setTasks([]);
-    setFilteredTasks([]);
-    setLoading(false);
-  }
-};
-
+  const fetchTasks = async () => {
+    try {
+      const data = await getTasks();
+      const reassigned = data?.reassigned || []; 
+      setTasks(reassigned);
+      setFilteredTasks(reassigned);
+      setLoading(false);
+    } catch (err) {
+      console.error("Error fetching reassigned tasks:", err);
+      setTasks([]);
+      setFilteredTasks([]);
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchTasks();
@@ -45,52 +44,46 @@ const CutterReassign = () => {
   };
 
   const handleSaveStatus = async (taskId) => {
-  try {
-    const status = statusUpdates[taskId];
-    if (!status) return;
+    try {
+      const status = statusUpdates[taskId];
+      if (!status) return;
 
-    await updateStaff(taskId, { status });
+      // ✅ Always include wasReassigned = true so it carries forward
+      await updateStaff(taskId, { status, wasReassigned: true });
 
-    // ✅ Remove from reassigned page immediately
-    setTasks((prev) => prev.filter((task) => task._id !== taskId));
-    setFilteredTasks((prev) => prev.filter((task) => task._id !== taskId));
+      // ✅ Remove from reassigned page immediately
+      setTasks((prev) => prev.filter((task) => task._id !== taskId));
+      setFilteredTasks((prev) => prev.filter((task) => task._id !== taskId));
 
-    setStatusUpdates((prev) => {
-      const updated = { ...prev };
-      delete updated[taskId];
-      return updated;
-    });
+      setStatusUpdates((prev) => {
+        const updated = { ...prev };
+        delete updated[taskId];
+        return updated;
+      });
 
-    // The task will now appear on the corresponding page automatically after backend fetch
-  } catch (err) {
-    console.error("Error saving status:", err);
-  }
-};
-
-
-  const getStatusBadge = (status, wasAssigned) => {
-    let base = "";
-    switch (status) {
-      case "pending":
-        base = "bg-red-100 text-red-700";
-        break;
-      case "in-progress":
-        base = "bg-yellow-100 text-yellow-700";
-        break;
-      case "done":
-        base = "bg-green-100 text-green-700";
-        break;
-      case "reassigned":
-        base = "bg-pink-100 text-pink-700";
-        break;
-      default:
-        base = "bg-gray-100 text-gray-700";
+      // Now this task will show up in Completed or InProgress
+      // with a "Reassigned" badge because of `wasReassigned`
+    } catch (err) {
+      console.error("Error saving status:", err);
     }
-    return `${base} ${wasAssigned ? "border border-pink-500" : ""}`;
   };
 
-  if (loading)
-    return <p className="text-center mt-6">Loading tasks...</p>;
+  const getStatusBadge = (status) => {
+    switch (status) {
+      case "pending":
+        return "bg-red-100 text-red-700";
+      case "in-progress":
+        return "bg-yellow-100 text-yellow-700";
+      case "done":
+        return "bg-green-100 text-green-700";
+      case "reassigned":
+        return "bg-pink-100 text-pink-700";
+      default:
+        return "bg-gray-100 text-gray-700";
+    }
+  };
+
+  if (loading) return <p className="text-center mt-6">Loading tasks...</p>;
   if (!filteredTasks.length)
     return <p className="text-center mt-6 text-gray-500">No reassigned tasks found.</p>;
 
@@ -98,6 +91,7 @@ const CutterReassign = () => {
     <div className="p-2">
       <h2 className="text-2xl font-bold mb-4 text-gray-800">Reassigned Tasks</h2>
 
+      {/* Search */}
       <div className="mb-4">
         <input
           type="text"
@@ -114,20 +108,19 @@ const CutterReassign = () => {
             key={task._id}
             className="border rounded-lg shadow-md bg-white hover:shadow-lg transition overflow-hidden"
           >
+            {/* Header */}
             <div className="bg-gradient-to-r from-pink-500 to-pink-700 text-white px-4 py-2 flex justify-between items-center">
               <h3 className="font-bold text-base">
                 Order #{task.order?.orderNo || "N/A"}
               </h3>
               <span
-                className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getStatusBadge(
-                  task.status,
-                  task.wasAssigned
-                )}`}
+                className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getStatusBadge(task.status)}`}
               >
-                {task.status.toUpperCase()} {task.wasAssigned ? "(Assigned)" : ""}
+                {task.status.toUpperCase()}
               </span>
             </div>
 
+            {/* Body */}
             <div className="divide-y text-sm px-4 py-3">
               {/* Service */}
               <div className="flex justify-between items-center">
@@ -170,7 +163,6 @@ const CutterReassign = () => {
                   <option value="" disabled>Update Status</option>
                   <option value="done">Done</option>
                   <option value="in-progress">In Progress</option>
-                  <option value="reassigned">Reassign Again</option>
                 </select>
 
                 {statusUpdates[task._id] && (

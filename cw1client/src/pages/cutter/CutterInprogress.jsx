@@ -12,12 +12,18 @@ const InProgressTasks = () => {
   try {
     const data = await getTasks();
 
-    // ✅ Include all in-progress tasks
     let inProgress = Array.isArray(data.inProgress) ? data.inProgress : [];
+    let reassigned = Array.isArray(data.reassigned) ? data.reassigned : [];
 
-    // ✅ Optional: sort or filter if needed
-    setTasks(inProgress);
-    setFilteredTasks(inProgress);
+    // ✅ mark reassigned tasks
+    let reassignedInProgress = reassigned
+      .filter((task) => task.status === "in-progress")
+      .map((task) => ({ ...task, wasReassigned: true }));
+
+    let allTasks = [...inProgress, ...reassignedInProgress];
+
+    setTasks(allTasks);
+    setFilteredTasks(allTasks);
     setLoading(false);
   } catch (err) {
     console.error("Error fetching tasks:", err);
@@ -32,7 +38,7 @@ const InProgressTasks = () => {
     fetchTasks();
   }, []);
 
-  // 🔎 Search by order number
+  // 🔎 Search filter
   useEffect(() => {
     if (!searchTerm) {
       setFilteredTasks(tasks);
@@ -59,11 +65,10 @@ const InProgressTasks = () => {
 
       await updateStaff(taskId, { status });
 
-      // ✅ Remove task locally after updating
+      // ✅ Remove locally if status changes (so it moves to another page)
       setTasks((prev) => prev.filter((t) => t._id !== taskId));
       setFilteredTasks((prev) => prev.filter((t) => t._id !== taskId));
 
-      // ✅ Clear local status update
       setStatusUpdates((prev) => {
         const updated = { ...prev };
         delete updated[taskId];

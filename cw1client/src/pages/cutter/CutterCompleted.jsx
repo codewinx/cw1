@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { getTasks} from "../../api/cutter";
+import { getTasks } from "../../api/cutter";
 
 const CompletedTasks = () => {
   const [tasks, setTasks] = useState([]);
@@ -7,13 +7,23 @@ const CompletedTasks = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Fetch completed tasks
+  // ✅ Fetch completed + reassigned done tasks
   const fetchTasks = async () => {
     try {
       const data = await getTasks();
-      const doneTasks = Array.isArray(data.completed) ? data.completed : [];
-      setTasks(doneTasks);
-      setFilteredTasks(doneTasks);
+
+      const completed = Array.isArray(data.completed) ? data.completed : [];
+      const reassigned = Array.isArray(data.reassigned) ? data.reassigned : [];
+
+      // ✅ Take only reassigned tasks that are done
+      const reassignedDone = reassigned.filter(
+        (task) => task.status === "done"
+      );
+
+      const allCompleted = [...completed, ...reassignedDone];
+
+      setTasks(allCompleted);
+      setFilteredTasks(allCompleted);
       setLoading(false);
     } catch (err) {
       console.error("Error fetching tasks:", err);
@@ -27,7 +37,7 @@ const CompletedTasks = () => {
     fetchTasks();
   }, []);
 
-  // Search by order number
+  // 🔎 Search filter
   useEffect(() => {
     if (!searchTerm) {
       setFilteredTasks(tasks);
@@ -120,10 +130,8 @@ const CompletedTasks = () => {
               <div className="px-4 py-3 flex justify-between items-center">
                 <span className="font-medium text-gray-600">Expected</span>
                 <span className="text-gray-800">
-                  {task.wasReassigned && task.deadline
-                    ? new Date(task.deadline).toDateString()
-                    : task.order?.expectedDate
-                    ? new Date(task.order.expectedDate).toDateString()
+                  {task.latestDeadline
+                    ? new Date(task.latestDeadline).toDateString()
                     : "N/A"}
                 </span>
               </div>
