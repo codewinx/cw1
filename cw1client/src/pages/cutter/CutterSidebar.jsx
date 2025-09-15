@@ -11,6 +11,7 @@ const CutterSidebar = () => {
   const [open, setOpen] = useState(false);
 
   const [tasks, setTasks] = useState({
+    pending: [],
     inProgress: [],
     completed: [],
     reassigned: [],
@@ -42,6 +43,7 @@ const CutterSidebar = () => {
         };
 
         setTasks({
+          pending: uniqueByOrder(data.pending || []),
           inProgress: uniqueByOrder(data.inProgress || []),
           completed: uniqueByOrder(data.completed || []),
           reassigned: uniqueByOrder(data.reassigned || []),
@@ -55,7 +57,7 @@ const CutterSidebar = () => {
 
   const menuItems = [
     { icon: BarChart3, label: "Dashboard", path: "/cutter/dashboard" },
-    { icon: ClipboardList, label: "Assigned Tasks", path: "/cutter/cuttertasks" },
+    { icon: ClipboardList, label: "Assigned Tasks", path: "/cutter/cuttertasks",count: tasks.pending.length },
     { icon: Clock, label: "In Progress", path: "/cutter/cutterinprogress", count: tasks.inProgress.length },
     { icon: CheckCircle, label: "Completed", path: "/cutter/cuttercompleted", count: tasks.completed.length },
     { icon: ClipboardList, label: "Reassigned", path: "/cutter/cutterreassign", count: tasks.reassigned.length },
