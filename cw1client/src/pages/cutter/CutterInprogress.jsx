@@ -1,3 +1,4 @@
+// src/pages/cutter/InProgressTasks.jsx
 import React, { useEffect, useState } from "react";
 import { getTasks, updateStaff } from "../../api/cutter";
 
@@ -9,30 +10,56 @@ const InProgressTasks = () => {
   const [searchTerm, setSearchTerm] = useState("");
 
   const fetchTasks = async () => {
-  try {
-    const data = await getTasks();
+    try {
+      const data = await getTasks();
 
-    // ✅ Include all in-progress tasks
-    let inProgress = Array.isArray(data.inProgress) ? data.inProgress : [];
+      let inProgress = Array.isArray(data.inProgress) ? data.inProgress : [];
+      let reassigned = Array.isArray(data.reassigned) ? data.reassigned : [];
 
-    // ✅ Optional: sort or filter if needed
-    setTasks(inProgress);
-    setFilteredTasks(inProgress);
-    setLoading(false);
-  } catch (err) {
-    console.error("Error fetching tasks:", err);
-    setTasks([]);
-    setFilteredTasks([]);
-    setLoading(false);
-  }
-};
+      // ✅ keep only reassigned tasks that became in-progress
+      let reassignedInProgress = reassigned
+        .filter((task) => task.status === "in-progress")
+        .map((task) => ({ ...task, wasReassigned: true }));
 
+      // ✅ merge in-progress + reassignedInProgress
+      let allTasks = [
+        ...inProgress.map((t) => ({
+          ...t,
+          wasReassigned: t.wasReassigned || false,
+        })),
+        ...reassignedInProgress,
+      ];
+
+      // ✅ remove duplicates by orderNo (keep latest one)
+      let uniqueByOrder = Object.values(
+        allTasks.reduce((acc, task) => {
+          const orderNo = task.order?.orderNo;
+          if (!orderNo || !acc[orderNo]) {
+            acc[orderNo] = task;
+          } else {
+            // prefer reassigned task if conflict
+            if (task.wasReassigned) acc[orderNo] = task;
+          }
+          return acc;
+        }, {})
+      );
+
+      setTasks(uniqueByOrder);
+      setFilteredTasks(uniqueByOrder);
+      setLoading(false);
+    } catch (err) {
+      console.error("Error fetching tasks:", err);
+      setTasks([]);
+      setFilteredTasks([]);
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchTasks();
   }, []);
 
-  // 🔎 Search by order number
+  // 🔎 Search filter
   useEffect(() => {
     if (!searchTerm) {
       setFilteredTasks(tasks);
@@ -59,11 +86,10 @@ const InProgressTasks = () => {
 
       await updateStaff(taskId, { status });
 
-      // ✅ Remove task locally after updating
+      // ✅ remove from current list (it will reload on respective page)
       setTasks((prev) => prev.filter((t) => t._id !== taskId));
       setFilteredTasks((prev) => prev.filter((t) => t._id !== taskId));
 
-      // ✅ Clear local status update
       setStatusUpdates((prev) => {
         const updated = { ...prev };
         delete updated[taskId];
@@ -82,6 +108,8 @@ const InProgressTasks = () => {
         return "bg-yellow-100 text-yellow-700";
       case "done":
         return "bg-green-100 text-green-700";
+      case "reassigned":
+        return "bg-purple-100 text-purple-700";
       default:
         return "bg-gray-100 text-gray-700";
     }
@@ -93,7 +121,9 @@ const InProgressTasks = () => {
 
   return (
     <div className="p-2">
-      <h2 className="text-2xl font-bold mb-4 text-gray-800">In Progress Tasks</h2>
+      <h2 className="text-2xl font-bold mb-4 text-gray-800">
+        In Progress Tasks
+      </h2>
 
       {/* Search Bar */}
       <div className="mb-4">
@@ -136,7 +166,9 @@ const InProgressTasks = () => {
             <div className="divide-y text-sm">
               <div className="px-4 py-3 flex justify-between items-center">
                 <span className="font-medium text-gray-600">Service</span>
-                <span className="text-gray-800">{task.order?.service || "N/A"}</span>
+                <span className="text-gray-800">
+                  {task.order?.service || "N/A"}
+                </span>
               </div>
 
               <div className="px-4 py-3 flex justify-between items-center">

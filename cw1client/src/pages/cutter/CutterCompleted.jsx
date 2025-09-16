@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { getTasks} from "../../api/cutter";
+import { getTasks } from "../../api/cutter";
 
 const CompletedTasks = () => {
   const [tasks, setTasks] = useState([]);
@@ -7,13 +7,41 @@ const CompletedTasks = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Fetch completed tasks
   const fetchTasks = async () => {
     try {
       const data = await getTasks();
-      const doneTasks = Array.isArray(data.completed) ? data.completed : [];
-      setTasks(doneTasks);
-      setFilteredTasks(doneTasks);
+
+      const completed = Array.isArray(data.completed) ? data.completed : [];
+      const reassigned = Array.isArray(data.reassigned) ? data.reassigned : [];
+
+      // ✅ Only include reassigned tasks that are done (but not actively reassigned)
+      const reassignedDone = reassigned
+        .filter((task) => task.status === "done" && !task.isReassigned)
+        .map((task) => ({ ...task, wasReassigned: true }));
+
+      const allCompleted = [
+        ...completed.map((t) => ({
+          ...t,
+          wasReassigned: t.wasReassigned || false,
+        })),
+        ...reassignedDone,
+      ];
+
+      // ✅ Deduplicate tasks by orderNo (keep only the latest one)
+      const uniqueTasks = [];
+      const seenOrderNos = new Set();
+
+      for (let i = allCompleted.length - 1; i >= 0; i--) {
+        const task = allCompleted[i];
+        const orderNo = task.order?.orderNo;
+        if (!seenOrderNos.has(orderNo)) {
+          uniqueTasks.unshift(task); // keep latest occurrence
+          seenOrderNos.add(orderNo);
+        }
+      }
+
+      setTasks(uniqueTasks);
+      setFilteredTasks(uniqueTasks);
       setLoading(false);
     } catch (err) {
       console.error("Error fetching tasks:", err);
@@ -27,7 +55,7 @@ const CompletedTasks = () => {
     fetchTasks();
   }, []);
 
-  // Search by order number
+  // 🔎 Search filter
   useEffect(() => {
     if (!searchTerm) {
       setFilteredTasks(tasks);
@@ -40,7 +68,6 @@ const CompletedTasks = () => {
     );
   }, [searchTerm, tasks]);
 
-  // Badge colors
   const getStatusBadge = (status) => {
     switch (status) {
       case "pending":
@@ -54,9 +81,7 @@ const CompletedTasks = () => {
     }
   };
 
-  if (loading)
-    return <p className="text-center mt-6">Loading tasks...</p>;
-
+  if (loading) return <p className="text-center mt-6">Loading tasks...</p>;
   if (!filteredTasks.length)
     return (
       <p className="text-center mt-6 text-gray-500">
@@ -86,7 +111,7 @@ const CompletedTasks = () => {
             key={task._id}
             className="border rounded-lg shadow-md bg-white hover:shadow-lg transition overflow-hidden"
           >
-            {/* Card Header */}
+            {/* Header */}
             <div className="bg-gradient-to-r from-pink-500 to-pink-700 text-white px-4 py-2 flex justify-between items-center">
               <h3 className="font-bold text-base flex items-center gap-2">
                 Order #{task.order?.orderNo || "N/A"}
@@ -96,7 +121,6 @@ const CompletedTasks = () => {
                   </span>
                 )}
               </h3>
-
               <span
                 className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getStatusBadge(
                   task.status
@@ -106,9 +130,8 @@ const CompletedTasks = () => {
               </span>
             </div>
 
-            {/* Card Details */}
+            {/* Details */}
             <div className="divide-y text-sm">
-              {/* Service */}
               <div className="px-4 py-3 flex justify-between items-center">
                 <span className="font-medium text-gray-600">Service</span>
                 <span className="text-gray-800">
@@ -116,19 +139,15 @@ const CompletedTasks = () => {
                 </span>
               </div>
 
-              {/* Expected / Deadline */}
               <div className="px-4 py-3 flex justify-between items-center">
                 <span className="font-medium text-gray-600">Expected</span>
                 <span className="text-gray-800">
-                  {task.wasReassigned && task.deadline
-                    ? new Date(task.deadline).toDateString()
-                    : task.order?.expectedDate
-                    ? new Date(task.order.expectedDate).toDateString()
+                  {task.latestDeadline
+                    ? new Date(task.latestDeadline).toDateString()
                     : "N/A"}
                 </span>
               </div>
 
-              {/* Measurements */}
               <div className="px-4 py-3">
                 <span className="font-medium text-gray-600 block mb-1">
                   Measurements

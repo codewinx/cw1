@@ -29,7 +29,6 @@ exports.getCurrentStaff = async (req, res) => {
 exports.getCutterTasks = async (req, res) => {
   try {
     const cutterId = req.user?._id || req.params.cutterId;
-
     if (!cutterId) {
       return res.status(400).json({ error: "Cutter ID is required" });
     }
@@ -46,41 +45,24 @@ exports.getCutterTasks = async (req, res) => {
       .populate("history.to");
 
     const mappedTasks = tasks.map((t) => {
-      // check if this task was reassigned to this cutter
-      const wasReassigned = t.history.some(
-        (h) =>
-          h.action === "reassigned" &&
-          h.to?._id.toString() === cutterId.toString()
-      );
-
       const latestDeadline = t.deadline || t.order?.expectedDate;
-
-      return {
-        ...t.toObject(),
-        isReassigned: wasReassigned,
-        latestDeadline,
-      };
+      return { ...t.toObject(), latestDeadline };
     });
 
-    // ✅ Pending
+    // ✅ Pending (only fresh ones, never reassigned)
     const pending = mappedTasks.filter(
       (t) => t.status === "pending" && !t.isReassigned && !t.wasReassigned
     );
 
-    // ✅ In Progress
-    const inProgress = mappedTasks.filter(
-      (t) => t.status === "in-progress" && !t.isReassigned
-    );
+    // ✅ In Progress (normal + reassigned with badge)
+    const inProgress = mappedTasks.filter((t) => t.status === "in-progress");
 
-    // ✅ Completed (includes tasks that were reassigned but finished)
+    // ✅ Completed (normal + reassigned with badge)
     const completed = mappedTasks.filter((t) => t.status === "done");
 
-    // ✅ Reassigned (only if not completed yet)
+    // ✅ Reassigned (only those still pending)
     const reassigned = mappedTasks.filter(
-      (t) =>
-        t.isReassigned &&
-        t.status !== "done" &&
-        t.assignedTo?._id.toString() === cutterId.toString()
+      (t) => t.isReassigned && t.status === "pending"
     );
 
     res.json({ pending, inProgress, completed, reassigned });
@@ -89,6 +71,7 @@ exports.getCutterTasks = async (req, res) => {
     res.status(500).json({ error: "Server error while fetching tasks" });
   }
 };
+
 
 
 
@@ -125,10 +108,13 @@ exports.updateTaskStatus = async (req, res) => {
       updateFields.completedAt = new Date();
     }
 
-    // Clear isReassigned if task is being acted on
-    if (task.isReassigned && ["in-progress", "done"].includes(status)) {
-      updateFields.isReassigned = false;
-    }
+  // Don't kill the reassigned history
+if (task.isReassigned && ["in-progress", "done"].includes(status)) {
+  updateFields.isReassigned = false;     // ✅ so it's not shown in Reassigned page anymore
+  updateFields.wasReassigned = true;     // ✅ keep a history flag (new field in schema!)
+}
+
+
 
     // Update task
     const updatedTask = await Task.findByIdAndUpdate(taskId, updateFields, { new: true });
@@ -149,6 +135,7 @@ exports.updateTaskStatus = async (req, res) => {
     res.status(500).json({ error: "Failed to update task status" });
   }
 };
+
 
 //update profile
 exports.updateProfile = async (req, res) => {
