@@ -10,3 +10,15 @@ export const createCustomer = async (customerData) => {
     throw err.response?.data || { message: "Server error" };
   }
 };
+
+export const getOrderStats = async () => {
+  const token = localStorage.getItem("token");
+
+  const res = await api.get("/api/auth/stats", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  return res.data; // will contain { success: true, data: {...} }
+};
