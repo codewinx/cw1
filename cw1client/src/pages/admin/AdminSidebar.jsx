@@ -49,7 +49,7 @@ export default function AdminSidebar({ open, setOpen }) {
           </div>
 
           {/* Logo / Branding */}
-          <div className="hidden lg:block p-4 flex justify-center">
+          <div className="hidden lg:block p-4 flex justify-center mb-4">
             <img
               src={logo}
               alt="Her Hiness Logo"
@@ -58,7 +58,7 @@ export default function AdminSidebar({ open, setOpen }) {
           </div>
 
           {/* Navigation */}
-          <nav className="-mt-8 px-3 flex-1">
+          <nav className="-mt-8 px-3 flex-1 ">
             {menuItems.map(({ icon: Icon, label, path }) => (
               <NavLink
                 key={path}
@@ -67,7 +67,7 @@ export default function AdminSidebar({ open, setOpen }) {
                   `group flex items-center px-4 py-3 mb-2 text-sm font-medium rounded-xl transition-all duration-300 transform hover:scale-105 ${
                     isActive
                       ? "text-white bg-gradient-to-r from-pink-400 to-purple-400 shadow-md"
-                      : "text-gray-700 hover:text-white hover:bg-pink-200/50 hover:shadow-sm backdrop-blur-sm"
+                      : "text-gray-700 hover:text-black hover:bg-pink-200/50 hover:shadow-sm backdrop-blur-sm"
                   }`
                 }
               >
