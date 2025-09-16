@@ -8,30 +8,28 @@ const CurrentTasks = () => {
   const [statusUpdates, setStatusUpdates] = useState({});
   const [searchTerm, setSearchTerm] = useState("");
 
- const fetchTasks = async () => {
-  try {
-    const data = await getTasks();
+  const fetchTasks = async () => {
+    try {
+      const data = await getTasks();
 
-    // ✅ Use only backend's inProgress array
-    let pendingTasks = Array.isArray(data?.pending) ? data.pending : [];
+      // ✅ Use backend's `pending` array only
+      let pendingTasks = Array.isArray(data?.pending) ? data.pending : [];
 
-    // ✅ Safety filter to exclude reassigned tasks (like pending logic)
-    pendingTasks = pendingTasks.filter(
-      (task) => !task.wasReassigned && !task.isReassigned
-    );
+      // ✅ Filter out reassigned tasks (they belong to reassigned page)
+      pendingTasks = pendingTasks.filter(
+        (task) => !task.wasReassigned && !task.isReassigned
+      );
 
-    setTasks(pendingTasks);
-    setFilteredTasks(pendingTasks);
-    setLoading(false);
-  } catch (err) {
-    console.error("Error fetching tasks:", err);
-    setTasks([]);
-    setFilteredTasks([]);
-    setLoading(false);
-  }
-};
-
-
+      setTasks(pendingTasks);
+      setFilteredTasks(pendingTasks);
+      setLoading(false);
+    } catch (err) {
+      console.error("Error fetching tasks:", err);
+      setTasks([]);
+      setFilteredTasks([]);
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchTasks();
@@ -62,7 +60,7 @@ const CurrentTasks = () => {
 
       await updateStaff(taskId, { status });
 
-      // remove from pending after update
+      // ✅ remove updated task from current list (since pending → in-progress/done)
       const updatedTasks = tasks.filter((task) => task._id !== taskId);
       setTasks(updatedTasks);
       setFilteredTasks(updatedTasks);
@@ -82,7 +80,9 @@ const CurrentTasks = () => {
 
   if (loading) return <p className="text-center mt-6">Loading tasks...</p>;
   if (!filteredTasks.length)
-    return <p className="text-center mt-6 text-gray-500">No pending tasks found.</p>;
+    return (
+      <p className="text-center mt-6 text-gray-500">No pending tasks found.</p>
+    );
 
   return (
     <div className="p-2">

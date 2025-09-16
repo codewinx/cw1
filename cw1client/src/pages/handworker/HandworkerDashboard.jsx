@@ -3,9 +3,9 @@ import React from "react";
 
 const HandworkerDashboard = () => {
   const stats = [
-    { title: "Total Tasks", value: 0 },
+    
     { title: "Pending Tasks", value: 0 },
-    { title: "In Progress", value: 0 },
+    { title: "In-Progress Tasks", value: 0 },
     { title: "Completed Tasks", value: 0 },
   ];
 
