@@ -7,6 +7,13 @@ import {
 } from "../../api/staff";
 import { Edit, Trash2, Plus, X, Search, Eye } from "lucide-react";
 
+// Function to format Aadhar number for display
+const formatAadharNumber = (number) => {
+  if (!number) return "";
+  const cleaned = ("" + number).replace(/\D/g, "");
+  return cleaned.replace(/(\d{4})(?=\d)/g, "$1 ");
+};
+
 const AdminStaffManagement = () => {
   const [staffList, setStaffList] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -20,6 +27,7 @@ const AdminStaffManagement = () => {
     name: "",
     email: "",
     mobile: "",
+    aadharno: "",
     role: "",
     salary: "",
     address: "",
@@ -52,14 +60,18 @@ const AdminStaffManagement = () => {
   // Handle Create / Update
   const handleSave = async () => {
     try {
+      const aadhar = formData.aadharno.replace(/\s/g, "");
       if (editingStaff) {
-        await updateStaff(editingStaff._id, formData);
+        const staffData = { ...formData, aadharno: aadhar };
+        if (!staffData.password) {
+          delete staffData.password;
+        }
+        await updateStaff(editingStaff._id, staffData);
         alert("✅ Staff updated successfully");
       } else {
-        await createStaff(formData);
+        await createStaff({ ...formData, aadharno: aadhar });
         alert("✅ Staff added successfully");
       }
-
       setIsModalVisible(false);
       resetForm();
       fetchStaff();
@@ -71,7 +83,6 @@ const AdminStaffManagement = () => {
   // Handle Delete
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this staff?")) return;
-
     try {
       await deleteStaff(id);
       alert("✅ Staff deleted successfully");
@@ -87,6 +98,7 @@ const AdminStaffManagement = () => {
       name: "",
       email: "",
       mobile: "",
+      aadharno: "",
       role: "",
       salary: "",
       address: "",
@@ -101,11 +113,34 @@ const AdminStaffManagement = () => {
     setEditingStaff(null);
   };
 
+  // Handle Aadhar number input change with formatting
+  const handleAadharChange = (e) => {
+    const { value } = e.target;
+    // Remove non-digit characters and spaces
+    const cleanedValue = value.replace(/[\s\D]/g, "");
+    // Truncate to 12 digits
+    const limitedValue = cleanedValue.slice(0, 12);
+    setFormData({ ...formData, aadharno: limitedValue });
+  };
+
+  const handleEditClick = (staff) => {
+    setEditingStaff(staff);
+    // Set aadharno without spaces for the input value
+    setFormData({ ...staff, aadharno: staff.aadharno?.replace(/\s/g, "") || "" });
+    setIsModalVisible(true);
+  };
+
+  const handleViewClick = (staff) => {
+    setViewingStaff(staff);
+    setIsViewModalVisible(true);
+  };
+
   // Filter staff based on search term
   const filteredStaff = staffList.filter(
     (staff) =>
       staff.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       staff.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      staff.aadharno?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       staff.role.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -163,7 +198,7 @@ const AdminStaffManagement = () => {
                   Email
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Mobile
+                  Aadhar No.
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   Role
@@ -191,7 +226,7 @@ const AdminStaffManagement = () => {
                     <div className="text-sm text-gray-600">{staff.email}</div>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="text-sm text-gray-600">{staff.mobile}</div>
+                    <div className="text-sm text-gray-600">{formatAadharNumber(staff.aadharno)}</div>
                   </td>
                   <td className="px-6 py-4">
                     <span
@@ -211,21 +246,14 @@ const AdminStaffManagement = () => {
                     <div className="flex gap-2">
                       <button
                         className="p-2 text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg transition-colors"
-                        onClick={() => {
-                          setViewingStaff(staff);
-                          setIsViewModalVisible(true);
-                        }}
+                        onClick={() => handleViewClick(staff)}
                         title="View Details"
                       >
                         <Eye size={18} />
                       </button>
                       <button
                         className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
-                        onClick={() => {
-                          setEditingStaff(staff);
-                          setFormData(staff);
-                          setIsModalVisible(true);
-                        }}
+                        onClick={() => handleEditClick(staff)}
                         title="Edit Staff"
                       >
                         <Edit size={18} />
@@ -282,37 +310,94 @@ const AdminStaffManagement = () => {
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {[
-                { name: "name", label: "Full Name", type: "text" },
-                { name: "email", label: "Email Address", type: "email" },
-                { name: "mobile", label: "Mobile Number", type: "text" },
-                { name: "salary", label: "Salary", type: "number" },
-                { name: "address", label: "Address", type: "text" },
-                { name: "starRating", label: "Star Rating (0-5)", type: "number" },
-                { name: "experience", label: "Experience (years)", type: "number" },
-              ].map((field) => (
-                <div key={field.name} className="space-y-2">
-                  <label className="block text-sm font-semibold text-gray-700">
-                    {field.label}
-                  </label>
-                  <input
-                    type={field.type}
-                    value={formData[field.name] || ""}
-                    min={field.name === "starRating" ? 0 : undefined}
-                    max={field.name === "starRating" ? 5 : undefined}
-                    onChange={(e) =>
-                      setFormData({ ...formData, [field.name]: e.target.value })
-                    }
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 focus:border-pink-300 transition-all"
-                  />
-                </div>
-              ))}
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700">Full Name</label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 focus:border-pink-300 transition-all"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700">Email Address</label>
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 focus:border-pink-300 transition-all"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700">Mobile Number</label>
+                <input
+                  type="text"
+                  value={formData.mobile}
+                  onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 focus:border-pink-300 transition-all"
+                />
+              </div>
+
+              {/* Aadhar Number Input Field with fixed formatting */}
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700">Aadhar Number</label>
+                <input
+                  type="text"
+                  value={formatAadharNumber(formData.aadharno)}
+                  onChange={handleAadharChange}
+                  maxLength="14" // 12 digits + 2 spaces
+                  placeholder="e.g., 1234 5678 9012"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 focus:border-pink-300 transition-all"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700">Salary</label>
+                <input
+                  type="number"
+                  value={formData.salary}
+                  onChange={(e) => setFormData({ ...formData, salary: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 focus:border-pink-300 transition-all"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700">Address</label>
+                <input
+                  type="text"
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 focus:border-pink-300 transition-all"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700">Star Rating (0-5)</label>
+                <input
+                  type="number"
+                  value={formData.starRating}
+                  onChange={(e) => setFormData({ ...formData, starRating: e.target.value })}
+                  min="0"
+                  max="5"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 focus:border-pink-300 transition-all"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700">Experience (years)</label>
+                <input
+                  type="number"
+                  value={formData.experience}
+                  onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 focus:border-pink-300 transition-all"
+                />
+              </div>
 
               {/* Profile Image Upload */}
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">
-                  Profile Image
-                </label>
+                <label className="block text-sm font-semibold text-gray-700">Profile Image</label>
                 <input
                   type="file"
                   accept="image/*"
@@ -342,14 +427,10 @@ const AdminStaffManagement = () => {
 
               {/* Role */}
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">
-                  Role
-                </label>
+                <label className="block text-sm font-semibold text-gray-700">Role</label>
                 <select
                   value={formData.role}
-                  onChange={(e) =>
-                    setFormData({ ...formData, role: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                   className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 focus:border-pink-300 transition-all"
                 >
                   <option value="">Select Role</option>
@@ -362,14 +443,10 @@ const AdminStaffManagement = () => {
 
               {/* Gender */}
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">
-                  Gender
-                </label>
+                <label className="block text-sm font-semibold text-gray-700">Gender</label>
                 <select
                   value={formData.gender}
-                  onChange={(e) =>
-                    setFormData({ ...formData, gender: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
                   className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 focus:border-pink-300 transition-all"
                 >
                   <option value="">Select Gender</option>
@@ -381,15 +458,11 @@ const AdminStaffManagement = () => {
 
               {/* Username */}
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">
-                  Username
-                </label>
+                <label className="block text-sm font-semibold text-gray-700">Username</label>
                 <input
                   type="text"
-                  value={formData.username || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, username: e.target.value })
-                  }
+                  value={formData.username}
+                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                   className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 focus:border-pink-300 transition-all"
                 />
               </div>
@@ -403,10 +476,8 @@ const AdminStaffManagement = () => {
                 </label>
                 <input
                   type="password"
-                  value={formData.password || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, password: e.target.value })
-                  }
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 focus:border-pink-300 transition-all"
                 />
               </div>
@@ -418,9 +489,7 @@ const AdminStaffManagement = () => {
                 <input
                   type="checkbox"
                   checked={formData.certified}
-                  onChange={(e) =>
-                    setFormData({ ...formData, certified: e.target.checked })
-                  }
+                  onChange={(e) => setFormData({ ...formData, certified: e.target.checked })}
                   className="w-4 h-4 text-pink-500 bg-gray-100 border-gray-300 rounded focus:ring-pink-300 focus:ring-2"
                 />
                 <label className="text-sm font-semibold text-gray-700">
@@ -471,99 +540,84 @@ const AdminStaffManagement = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">
-                  Full Name
-                </label>
+                <label className="block text-sm font-semibold text-gray-700">Full Name</label>
                 <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">
                   {viewingStaff.name || "N/A"}
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">
-                  Email
-                </label>
+                <label className="block text-sm font-semibold text-gray-700">Email</label>
                 <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">
                   {viewingStaff.email || "N/A"}
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">
-                  Mobile
-                </label>
+                <label className="block text-sm font-semibold text-gray-700">Mobile</label>
                 <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">
                   {viewingStaff.mobile || "N/A"}
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">
-                  Role
-                </label>
+                <label className="block text-sm font-semibold text-gray-700">Aadhar Number</label>
+                <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">
+                  {formatAadharNumber(viewingStaff.aadharno) || "N/A"}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700">Role</label>
                 <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">
                   {viewingStaff.role || "N/A"}
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">
-                  Salary
-                </label>
+                <label className="block text-sm font-semibold text-gray-700">Salary</label>
                 <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">
                   {viewingStaff.salary || "N/A"}
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">
-                  Address
-                </label>
+                <label className="block text-sm font-semibold text-gray-700">Address</label>
                 <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">
                   {viewingStaff.address || "N/A"}
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">
-                  Gender
-                </label>
+                <label className="block text-sm font-semibold text-gray-700">Gender</label>
                 <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">
                   {viewingStaff.gender || "N/A"}
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">
-                  Experience
-                </label>
+                <label className="block text-sm font-semibold text-gray-700">Experience</label>
                 <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">
                   {viewingStaff.experience || 0} years
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">
-                  Star Rating
-                </label>
+                <label className="block text-sm font-semibold text-gray-700">Star Rating</label>
                 <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">
                   ⭐ {viewingStaff.starRating || 0}/5
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">
-                  Certified
-                </label>
+                <label className="block text-sm font-semibold text-gray-700">Certified</label>
                 <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">
                   {viewingStaff.certified ? "✅ Yes" : "❌ No"}
                 </div>
               </div>
 
               <div className="space-y-2 col-span-2">
-                <label className="block text-sm font-semibold text-gray-700">
-                  Profile Image
-                </label>
+                <label className="block text-sm font-semibold text-gray-700">Profile Image</label>
                 {viewingStaff.profileImage ? (
                   <img
                     src={viewingStaff.profileImage}
