@@ -15,7 +15,7 @@ export default function AdminLayout() {
         <AdminHeader /> {/* ✅ use header component */}
 
         {/* Page Content */}
-        <main className="flex-1 p-6 overflow-y-auto">
+        <main className="flex-1 p-6 overflow-y-auto bg-gradient-to-r from-pink-400 to-purple-400">
           <Outlet />
         </main>
       </div>

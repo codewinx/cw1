@@ -1,50 +1,12 @@
-const express = require("express");
+import express from "express";
+import { createOrder, getOrders, getOrderById } from "../controllers/orderController.js";
+import uploadDesign from "../middleware/uploadDesign.js"; // ✅ default import
+import { protect, authorize } from "../middleware/authMiddleware.js";
+
 const router = express.Router();
-const orderController = require("../controllers/orderController");
-const { protect, authorize } = require("../middleware/authMiddleware");
 
-// ============================
-// Order Routes
-// ============================
+router.post("/", protect, authorize("admin", "manager"), uploadDesign, createOrder);
+router.get("/", protect, authorize("admin", "manager"), getOrders);
+router.get("/:id", protect, authorize("admin", "manager"), getOrderById);
 
-// 📌 Create Order (Admin only)
-router.post(
-  "/create",
-  protect,
-  authorize("admin"),
-  orderController.createOrder
-);
-
-// 📌 Get all orders (Admin + Staff can view)
-router.get(
-  "/",
-  protect,
-  authorize("admin", "staff"),
-  orderController.getOrders
-);
-
-// 📌 Get single order by ID
-router.get(
-  "/:id",
-  protect,
-  authorize("admin", "staff"),
-  orderController.getOrderById
-);
-
-// 📌 Update order (Admin only)
-router.put(
-  "/:id",
-  protect,
-  authorize("admin"),
-  orderController.updateOrder
-);
-
-// 📌 Delete order (Admin only)
-router.delete(
-  "/:id",
-  protect,
-  authorize("admin"),
-  orderController.deleteOrder
-);
-
-module.exports = router;
+export default router;

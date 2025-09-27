@@ -1,415 +1,348 @@
 import React, { useState, useEffect } from "react";
+import { getCategories, getServicesByCategory } from "../../api/service";
 import { createOrder } from "../../api/order";
-import { searchCustomers } from "../../api/customer";
-import {
-  getMeasurementsByCustomerId,
-  createMeasurement,
-  updateMeasurement,
-} from "../../api/measurement";
-import { XCircle, CheckCircle, Plus, Edit } from "lucide-react";
 
-const AdminAddOrder = () => {
+const AdminAddOrder = ({ onClose }) => {
+  const [categories, setCategories] = useState([]);
+  const [filteredServices, setFilteredServices] = useState([]);
+  const [selectedService, setSelectedService] = useState(null);
+  const [previewImages, setPreviewImages] = useState({});
+  const [showPreview, setShowPreview] = useState(null);
+
   const [formData, setFormData] = useState({
-    customer: "",
+    customer: { name: "", email: "", phone: "", address: "", gender: "Male" },
     category: "",
-    service: "",
-    design: "",
-    rawMaterial: "",
+    serviceId: "",
+    items: [
+      {
+        design: null,
+        color: "",
+        rawMaterial: { cloth: false, lining: false },
+        measurements: [],
+      },
+    ],
+    quantity: 1,
     expectedDate: "",
-    totalAmount: "",
-    advanceAmount: "",
-    extraCharges: "",
-    paymentMethod: "",
+    payment: {
+      totalAmount: "",
+      advanceAmount: "",
+      extraCharges: { amount: "", note: "" },
+      paymentMode: "Cash",
+    },
   });
 
-  const [suggestions, setSuggestions] = useState([]);
-  const [selectedCustomer, setSelectedCustomer] = useState(null);
-  const [customerMeasurements, setCustomerMeasurements] = useState([]);
-  const [selectedMeasurement, setSelectedMeasurement] = useState("");
-  const [isAddingMeasurement, setIsAddingMeasurement] = useState(false);
-  const [newMeasurementCategory, setNewMeasurementCategory] = useState("");
-  const [newMeasurementData, setNewMeasurementData] = useState([
-    { key: "", value: "" },
-  ]);
-
-  const [message, setMessage] = useState("");
-  const [isSuccess, setIsSuccess] = useState(true);
-  const [loading, setLoading] = useState(false);
-
-  // Auto clear message
+  // Fetch categories
   useEffect(() => {
-    if (message) {
-      const timer = setTimeout(() => setMessage(""), 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [message]);
-
-  // Fetch measurements for customer
-  useEffect(() => {
-    const fetchMeasurements = async () => {
-      if (!selectedCustomer) return;
-      setLoading(true);
+    const fetchCats = async () => {
       try {
-        const data = await getMeasurementsByCustomerId(selectedCustomer._id);
-        setCustomerMeasurements(data);
-        if (data.length > 0) {
-          setSelectedMeasurement(data[0]._id);
-        }
+        const data = await getCategories();
+        setCategories(data);
+        console.log(data);
       } catch (err) {
-        setCustomerMeasurements([]);
-      } finally {
-        setLoading(false);
+        console.error("Error fetching categories:", err);
       }
     };
-    fetchMeasurements();
-  }, [selectedCustomer]);
+    fetchCats();
+  }, []);
 
-  // Input changes
-  const handleChange = (e) =>
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  // Category change
+ const handleCategoryChange = async (e) => {
+  const category = e.target.value;
+  setFormData((prev) => ({
+    ...prev,
+    category,
+    serviceId: "",
+    items: [
+      { design: null, color: "", rawMaterial: { cloth: false, lining: false }, measurements: [] }
+    ],
+    quantity: 1,
+  }));
+  setSelectedService(null);
 
-  const handleCustomerSearch = async (e) => {
-    const value = e.target.value;
-    setFormData({ ...formData, customer: value });
-    setSelectedCustomer(null);
+  if (category) {
+    try {
+      const data = await getServicesByCategory(category);
+      // data.services is the array we need
+      setFilteredServices(data.services || []);
+    } catch (err) {
+      console.error(err);
+    }
+  } else {
+    setFilteredServices([]);
+  }
+};
 
-    if (value.length > 0) {
-      try {
-        const results = await searchCustomers(value);
-        setSuggestions(results);
-      } catch {
-        setSuggestions([]);
-      }
+
+  // Service change → set measurement fields
+  const handleServiceChange = (e) => {
+    const serviceId = e.target.value;
+    const service = filteredServices.find((s) => s._id === serviceId);
+    setSelectedService(service);
+
+    if (service) {
+      const measurementFields = service.measurements.map((m) => ({
+        fieldName: m,
+        value: "",
+      }));
+      const items = Array(formData.quantity)
+        .fill(null)
+        .map(() => ({
+          measurements: [...measurementFields],
+          design: null,
+          color: "",
+          rawMaterial: { cloth: false, lining: false },
+        }));
+      setFormData((prev) => ({ ...prev, serviceId, items }));
     } else {
-      setSuggestions([]);
+      setFormData((prev) => ({ ...prev, serviceId, items: [] }));
     }
   };
 
-  const handleSelectCustomer = (cust) => {
-    setFormData({ ...formData, customer: cust.name });
-    setSelectedCustomer(cust);
-    setSuggestions([]);
-  };
-
-  // Measurement input changes
-  const handleNewMeasurementChange = (index, e) => {
-    const updated = [...newMeasurementData];
-    updated[index][e.target.name] = e.target.value;
-    setNewMeasurementData(updated);
-  };
-
-  const addMeasurementRow = () =>
-    setNewMeasurementData([...newMeasurementData, { key: "", value: "" }]);
-
-  const handleSaveMeasurement = async () => {
-    if (!selectedCustomer) {
-      setMessage("Select a customer first.");
-      setIsSuccess(false);
-      return;
-    }
-    if (!newMeasurementCategory) {
-      setMessage("Enter a measurement category.");
-      setIsSuccess(false);
-      return;
-    }
-
-    const validData = newMeasurementData.filter((m) => m.key && m.value);
-    if (validData.length === 0) {
-      setMessage("Add at least one measurement field.");
-      setIsSuccess(false);
-      return;
-    }
-
-    try {
-      const newMeas = await createMeasurement(
-        selectedCustomer._id,
-        newMeasurementCategory,
-        validData
-      );
-      setMessage("Measurement saved!");
-      setIsSuccess(true);
-
-      // Refresh measurement list
-      const updatedList = await getMeasurementsByCustomerId(
-        selectedCustomer._id
-      );
-      setCustomerMeasurements(updatedList);
-      setSelectedMeasurement(newMeas.measurement._id);
-
-      // Reset add measurement form
-      setIsAddingMeasurement(false);
-      setNewMeasurementCategory("");
-      setNewMeasurementData([{ key: "", value: "" }]);
-    } catch (err) {
-      setMessage(err.message || "Error saving measurement");
-      setIsSuccess(false);
-    }
-  };
-
-  // Save Order
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!selectedCustomer) {
-      setMessage("Please select a customer.");
-      setIsSuccess(false);
-      return;
-    }
-    if (!selectedMeasurement) {
-      setMessage("A measurement profile must be selected for this order.");
-      setIsSuccess(false);
-      return;
-    }
-
-    const dataToSend = {
-      ...formData,
-      customer: selectedCustomer._id,
-      measurement: [selectedMeasurement],
-      rawMaterial: {
-        isProvided: !!formData.rawMaterial,
-        name: formData.rawMaterial,
-        price: 0,
-      },
-    };
-
-    try {
-      const res = await createOrder(dataToSend);
-      setMessage(res.message || "Order created!");
-      setIsSuccess(true);
-
-      // Reset form
-      setFormData({
-        customer: "",
-        category: "",
-        service: "",
-        design: "",
-        rawMaterial: "",
-        expectedDate: "",
-        totalAmount: "",
-        advanceAmount: "",
-        extraCharges: "",
-        paymentMethod: "",
+  // Quantity change → adjust items array
+  const handleQuantityChange = (e) => {
+    const quantity = Math.max(1, parseInt(e.target.value, 10));
+    const currentItems = [...formData.items];
+    while (currentItems.length < quantity) {
+      currentItems.push({
+        measurements: selectedService
+          ? selectedService.measurements.map((m) => ({ fieldName: m, value: "" }))
+          : [],
+        design: null,
+        color: "",
+        rawMaterial: { cloth: false, lining: false },
       });
-      setSelectedCustomer(null);
-      setCustomerMeasurements([]);
-      setSelectedMeasurement("");
-    } catch (err) {
-      setMessage(err.message || "Order failed");
-      setIsSuccess(false);
+    }
+    currentItems.length = quantity;
+    setFormData((prev) => ({ ...prev, quantity, items: currentItems }));
+  };
+
+  // Measurement change
+  const handleMeasurementChange = (index, fieldIndex, value) => {
+    const items = [...formData.items];
+    items[index].measurements[fieldIndex].value = value;
+    setFormData((prev) => ({ ...prev, items }));
+  };
+
+  // Design change
+  const handleDesignChange = (index, file) => {
+    const items = [...formData.items];
+    items[index].design = file;
+    setFormData((prev) => ({ ...prev, items }));
+    if (file) setPreviewImages((prev) => ({ ...prev, [index]: URL.createObjectURL(file) }));
+  };
+
+  // Color change
+  const handleColorChange = (index, color) => {
+    const items = [...formData.items];
+    items[index].color = color;
+    setFormData((prev) => ({ ...prev, items }));
+  };
+
+  // Raw Material change
+  const handleRawMaterialChange = (index, name, checked) => {
+    const items = [...formData.items];
+    items[index].rawMaterial[name] = checked;
+    setFormData((prev) => ({ ...prev, items }));
+  };
+
+  // Customer & Payment change
+  const handleChange = (e, section, subField) => {
+    const { name, value, checked, type } = e.target;
+    if (section === "customer") {
+      setFormData((prev) => ({
+        ...prev,
+        customer: { ...prev.customer, [name]: value },
+      }));
+    } else if (section === "payment") {
+      if (subField) {
+        setFormData((prev) => ({
+          ...prev,
+          payment: { ...prev.payment, [subField]: { ...prev.payment[subField], [name]: value } },
+        }));
+      } else {
+        setFormData((prev) => ({ ...prev, payment: { ...prev.payment, [name]: value } }));
+      }
     }
   };
+
+  // Submit
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  try {
+    const data = new FormData();
+    data.append("customer", JSON.stringify(formData.customer));
+    data.append("category", formData.category);
+    data.append("serviceId", formData.serviceId);
+    data.append("quantity", formData.quantity);
+    data.append("expectedDate", formData.expectedDate);
+    data.append(
+      "payment",
+      JSON.stringify({
+        totalAmount: Number(formData.payment.totalAmount),
+        advanceAmount: Number(formData.payment.advanceAmount),
+        extraCharges: {
+          amount: Number(formData.payment.extraCharges.amount),
+          note: formData.payment.extraCharges.note,
+        },
+        paymentMode: formData.payment.paymentMode,
+      })
+    );
+    data.append("items", JSON.stringify(formData.items));
+
+    // ✅ Append files with dynamic field names
+    formData.items.forEach((item, index) => {
+      if (item.design) data.append(`design_${index}`, item.design);
+    });
+
+    await createOrder(data);
+    alert("✅ Order created successfully!");
+    onClose?.();
+  } catch (err) {
+    console.error(err);
+    alert("❌ Failed to create order");
+  }
+};
+
+
 
   return (
-    <div className="max-w-3xl mx-auto bg-white shadow-md rounded-lg p-6">
-      <h2 className="text-xl font-bold mb-4">Add Order</h2>
-
-      {message && (
-        <div
-          className={`flex items-center gap-2 p-3 mb-4 rounded ${
-            isSuccess ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-          }`}
+    <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
+      <div className="relative bg-white rounded-2xl shadow-lg w-full max-w-7xl p-8 overflow-y-auto max-h-[90vh]">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-gray-500 hover:text-red-600"
         >
-          {isSuccess ? <CheckCircle size={20} /> : <XCircle size={20} />}
-          <span>{message}</span>
-        </div>
-      )}
+          ✕
+        </button>
+        <h2 className="text-2xl font-bold mb-6 text-center">Add New Order</h2>
 
-      <form onSubmit={handleSubmit} className="space-y-3">
-        {/* Customer Search */}
-        <div className="relative">
-          <input
-            type="text"
-            name="customer"
-            value={formData.customer}
-            placeholder="Search customer"
-            onChange={handleCustomerSearch}
-            className="w-full border p-2 rounded"
-          />
-          {suggestions.length > 0 && (
-            <ul className="absolute w-full bg-white border shadow max-h-40 overflow-y-auto z-10">
-              {suggestions.map((c) => (
-                <li
-                  key={c._id}
-                  onClick={() => handleSelectCustomer(c)}
-                  className="p-2 hover:bg-gray-100 cursor-pointer"
-                >
-                  {c.name} ({c.phone})
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        {/* Basic fields */}
-        <input
-          name="category"
-          placeholder="Category"
-          value={formData.category}
-          onChange={handleChange}
-          className="w-full border p-2 rounded"
-        />
-        <input
-          name="service"
-          placeholder="Service"
-          value={formData.service}
-          onChange={handleChange}
-          className="w-full border p-2 rounded"
-        />
-        <input
-          name="design"
-          placeholder="Design"
-          value={formData.design}
-          onChange={handleChange}
-          className="w-full border p-2 rounded"
-        />
-        <input
-          name="rawMaterial"
-          placeholder="Raw Material"
-          value={formData.rawMaterial}
-          onChange={handleChange}
-          className="w-full border p-2 rounded"
-        />
-        <input
-          type="date"
-          name="expectedDate"
-          value={formData.expectedDate}
-          onChange={handleChange}
-          className="w-full border p-2 rounded"
-        />
-
-        {/* Amounts */}
-        <div className="grid grid-cols-3 gap-2">
-          <input
-            name="totalAmount"
-            placeholder="Total"
-            value={formData.totalAmount}
-            onChange={handleChange}
-            className="border p-2 rounded"
-          />
-          <input
-            name="advanceAmount"
-            placeholder="Advance"
-            value={formData.advanceAmount}
-            onChange={handleChange}
-            className="border p-2 rounded"
-          />
-          <input
-            name="extraCharges"
-            placeholder="Extra"
-            value={formData.extraCharges}
-            onChange={handleChange}
-            className="border p-2 rounded"
-          />
-        </div>
-
-        <select
-          name="paymentMethod"
-          value={formData.paymentMethod}
-          onChange={handleChange}
-          className="w-full border p-2 rounded"
-        >
-          <option value="">Payment Method</option>
-          <option value="cash">Cash</option>
-          <option value="card">Card</option>
-          <option value="upi">UPI</option>
-          <option value="qr">QR</option>
-          <option value="other">Other</option>
-        </select>
-
-        {/* Measurement Section */}
-        {selectedCustomer && !isAddingMeasurement && (
-          <div>
-            {loading ? (
-              <p>Loading measurements...</p>
-            ) : customerMeasurements.length > 0 ? (
-              <select
-                value={selectedMeasurement}
-                onChange={(e) => setSelectedMeasurement(e.target.value)}
-                className="w-full border p-2 rounded"
-              >
-                {customerMeasurements.map((m) => (
-                  <option key={m._id} value={m._id}>
-                    {m.category}
-                  </option>
-                ))}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Customer */}
+          <div className="border p-4 rounded-lg space-y-4">
+            <h3 className="text-lg font-semibold">Customer Details</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <input name="name" placeholder="Name" className="input" onChange={(e) => handleChange(e, "customer")} />
+              <input name="email" placeholder="Email" className="input" onChange={(e) => handleChange(e, "customer")} />
+              <input name="phone" placeholder="Phone" className="input" onChange={(e) => handleChange(e, "customer")} />
+              <input name="address" placeholder="Address" className="input" onChange={(e) => handleChange(e, "customer")} />
+              <select name="gender" className="input col-span-2 sm:col-span-1" onChange={(e) => handleChange(e, "customer")}>
+                <option>Male</option>
+                <option>Female</option>
+                <option>Other</option>
               </select>
-            ) : (
-              <p className="text-sm text-gray-500">
-                No measurements found for this customer.
-              </p>
-            )}
-
-            <button
-              type="button"
-              onClick={() => setIsAddingMeasurement(true)}
-              className="mt-2 flex items-center gap-2 bg-blue-500 text-white px-3 py-2 rounded"
-            >
-              <Plus size={16} /> Add New Measurement
-            </button>
-          </div>
-        )}
-
-        {/* New Measurement Form */}
-        {isAddingMeasurement && (
-          <div className="border p-3 rounded bg-gray-50">
-            <input
-              type="text"
-              placeholder="Measurement Category (e.g. Shirt)"
-              value={newMeasurementCategory}
-              onChange={(e) => setNewMeasurementCategory(e.target.value)}
-              className="w-full border p-2 rounded mb-2"
-            />
-            {newMeasurementData.map((row, i) => (
-              <div key={i} className="flex gap-2 mb-2">
-                <input
-                  name="key"
-                  placeholder="Field (e.g. Chest)"
-                  value={row.key}
-                  onChange={(e) => handleNewMeasurementChange(i, e)}
-                  className="flex-1 border p-2 rounded"
-                />
-                <input
-                  name="value"
-                  placeholder="Value (e.g. 40)"
-                  value={row.value}
-                  onChange={(e) => handleNewMeasurementChange(i, e)}
-                  className="flex-1 border p-2 rounded"
-                />
-              </div>
-            ))}
-            <button
-              type="button"
-              onClick={addMeasurementRow}
-              className="text-sm text-blue-600"
-            >
-              + Add Field
-            </button>
-
-            <div className="flex gap-2 mt-3">
-              <button
-                type="button"
-                onClick={handleSaveMeasurement}
-                className="flex-1 bg-green-600 text-white p-2 rounded"
-              >
-                Save Measurement
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsAddingMeasurement(false)}
-                className="flex-1 bg-gray-400 text-white p-2 rounded"
-              >
-                Cancel
-              </button>
             </div>
           </div>
-        )}
 
-        <button
-          type="submit"
-          className="w-full bg-green-600 text-white p-2 rounded"
-        >
-          Save Order
-        </button>
-      </form>
+          {/* Category, Service, Quantity */}
+          <div className="border p-4 rounded-lg grid grid-cols-3 gap-6">
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Category</h3>
+              <select className="input w-full" value={formData.category} onChange={handleCategoryChange}>
+  <option value="">Select Category</option>
+  {categories.map((c) => (
+    <option key={c.category} value={c.category}>{c.category}</option>
+  ))}
+</select>
+
+            </div>
+            {formData.category && (
+              <div>
+                <h3 className="text-lg font-semibold mb-2">Service</h3>
+                <select className="input w-full" value={formData.serviceId} onChange={handleServiceChange}>
+                  <option value="">Select Service</option>
+                 {filteredServices && filteredServices.map((s) => (
+  <option key={s._id} value={s._id}>{s.name}</option>
+))}
+
+
+                </select>
+              </div>
+            )}
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Quantity</h3>
+              <input type="number" min="1" className="input w-full" value={formData.quantity} onChange={handleQuantityChange} />
+            </div>
+          </div>
+
+          {/* Items */}
+          {formData.items.map((item, idx) => (
+            <div key={idx} className="border p-4 rounded-lg space-y-4 mt-4">
+              <h3 className="text-lg font-semibold text-blue-600 mb-2">Item #{idx + 1}</h3>
+              {item.measurements.map((m, i) => (
+                <div key={i} className="grid grid-cols-2 gap-3 items-center">
+                  <label className="font-medium">{m.fieldName}</label>
+                  <input type="text" className="input" value={m.value} placeholder="Enter measurement" onChange={(e) => handleMeasurementChange(idx, i, e.target.value)} />
+                </div>
+              ))}
+              <div className="grid grid-cols-3 gap-4 mt-2">
+                <div>
+                  <label className="block font-medium">Color</label>
+                  <input type="color" value={item.color} onChange={(e) => handleColorChange(idx, e.target.value)} className="w-full h-10 rounded" />
+                </div>
+                <div>
+                  <label className="block font-medium">Design</label>
+                  <input type="file" accept="image/*" onChange={(e) => handleDesignChange(idx, e.target.files[0])} className="input w-full" />
+                  {previewImages[idx] && (
+                    <button type="button" className="text-blue-600 hover:underline mt-1 text-sm" onClick={() => setShowPreview(idx)}>👁 Preview</button>
+                  )}
+                </div>
+                <div>
+                  <label className="block font-medium">Raw Material</label>
+                  <label className="mr-2"><input type="checkbox" checked={item.rawMaterial.cloth} onChange={(e) => handleRawMaterialChange(idx, "cloth", e.target.checked)} /> Cloth</label>
+                  <label><input type="checkbox" checked={item.rawMaterial.lining} onChange={(e) => handleRawMaterialChange(idx, "lining", e.target.checked)} /> Lining</label>
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {/* Expected Date & Payment */}
+          <div className="border p-4 rounded-lg grid grid-cols-2 gap-6">
+            <div>
+              <label className="block font-semibold mb-1">Expected Date</label>
+              <input type="date" className="input w-full" value={formData.expectedDate} onChange={(e) => setFormData((prev) => ({ ...prev, expectedDate: e.target.value }))} />
+            </div>
+            <div className="space-y-2">
+              <h3 className="font-semibold text-lg">Payment Details</h3>
+              <div>
+                <label className="font-medium">Total Amount</label>
+                <input type="number" className="input w-full" value={formData.payment.totalAmount} onChange={(e) => handleChange(e, "payment")} name="totalAmount" />
+              </div>
+              <div>
+                <label className="font-medium">Advance Amount</label>
+                <input type="number" className="input w-full" value={formData.payment.advanceAmount} onChange={(e) => handleChange(e, "payment")} name="advanceAmount" />
+              </div>
+              <div>
+                <label className="font-medium">Extra Charges</label>
+                <input type="number" className="input w-full" value={formData.payment.extraCharges.amount} onChange={(e) => handleChange(e, "payment", "extraCharges")} name="amount" />
+              </div>
+              <div>
+                <label className="font-medium">Extra Charges Note</label>
+                <input type="text" className="input w-full" value={formData.payment.extraCharges.note} onChange={(e) => handleChange(e, "payment", "extraCharges")} name="note" />
+              </div>
+              <div>
+                <label className="font-medium">Payment Mode</label>
+                <select className="input w-full" value={formData.payment.paymentMode} onChange={(e) => handleChange(e, "payment")} name="paymentMode">
+                  <option>Cash</option><option>UPI</option><option>Card</option><option>Bank Transfer</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition">
+            Submit Order
+          </button>
+        </form>
+      </div>
+
+      {/* Preview Modal */}
+      {showPreview !== null && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-70 z-50">
+          <div className="bg-white p-4 rounded-lg shadow-lg relative">
+            <button className="absolute top-2 right-2 text-gray-600 hover:text-red-600" onClick={() => setShowPreview(null)}>✕</button>
+            <img src={previewImages[showPreview]} alt="Design Preview" className="max-w-md max-h-[70vh] rounded-lg" />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

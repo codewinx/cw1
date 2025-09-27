@@ -1,218 +1,96 @@
-const Order = require("../models/Order");
-const Counter = require("../models/Counter");
-const Task = require("../models/Task");
+// Create new Order (with quantity support)
 
-// ===============================
-// Create Order
-// ===============================
-exports.createOrder = async (req, res) => {
+import Customer from "../models/Customer.js";
+ import Service from "../models/Service.js";
+  import Payment from "../models/Payment.js"; 
+  import Order from "../models/Order.js";
+
+export const createOrder = async (req, res) => {
   try {
-    const {
-      customer,
-      category,
-      service,
-      design,
-      rawMaterial,
-      expectedDate,
-      totalAmount,
-      advanceAmount,
-      extraCharges,
-      paymentMethod,
-      measurement,
-    } = req.body;
+    const customerData = JSON.parse(req.body.customer);
+    const itemsData = JSON.parse(req.body.items || "[]");
+    const paymentData = JSON.parse(req.body.payment);
+    const quantity = parseInt(req.body.quantity || "1", 10);
 
-    if (!customer || !category || !service || !totalAmount) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Customer, category, service, and totalAmount are required" });
+    // 🔹 Customer
+    let existingCustomer = await Customer.findOne({ phone: customerData.phone });
+    if (!existingCustomer) {
+      existingCustomer = await Customer.create(customerData);
     }
 
-    if (!measurement || measurement.length === 0) {
-      return res
-        .status(400)
-        .json({ success: false, message: "A measurement profile must be selected" });
-    }
+    // 🔹 Service
+    const service = await Service.findOne({
+      _id: req.body.serviceId,
+      category: req.body.category,
+    });
+    if (!service) return res.status(404).json({ message: "Service not found" });
 
-    // Auto-generate Order No
-    const counter = await Counter.findOneAndUpdate(
-      { name: "orderNo" },
-      { $inc: { value: 1 } },
-      { new: true, upsert: true }
-    );
-    const orderNo = counter.value;
+    // 🔹 Payment
+    const paymentDoc = await Payment.create(paymentData);
 
-    // Calculate pending
-    const pendingAmount =
-      (parseFloat(totalAmount) + (parseFloat(extraCharges) || 0)) -
-      (parseFloat(advanceAmount) || 0);
-
-    const newOrder = new Order({
-      orderNo,
-      customer,
-      category,
-      service,
-      design,
-      rawMaterial,
-      expectedDate,
-      totalAmount,
-      advanceAmount,
-      extraCharges,
-      pendingAmount,
-      paymentMethod,
-      measurement,
-      createdBy: req.user._id,
+    // 🔹 Map design files to items
+    const designFiles = {};
+    req.files?.forEach((file) => {
+      const idx = file.fieldname.split("_")[1]; // design_0 → 0
+      designFiles[idx] = `/uploads/design/${file.filename}`;
     });
 
-    await newOrder.save();
+    // 🔹 Create suborders
+    const orders = [];
+    for (let i = 0; i < itemsData.length; i++) {
+      const item = itemsData[i];
+      const order = new Order({
+        customer: existingCustomer._id,
+        service: service._id,
+        measurements: item.measurements,
+        designImage: designFiles[i] || null,
+        color: item.color || "",
+        rawMaterial: item.rawMaterial,
+        expectedDate: req.body.expectedDate,
+        payment: paymentDoc._id,
+        orderNo: i === 0 ? undefined : `${Date.now()}/${i + 1}`, // e.g., ORD-001/2
+      });
+      await order.save();
+      orders.push(order);
+    }
 
-    res.status(201).json({ success: true, message: "Order created successfully", order: newOrder });
+    res.status(201).json({
+      message: "✅ Order(s) created successfully",
+      orders,
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Error creating order", error: error.message });
+    console.error("❌ Error creating order:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
-// ===============================
-// Get All Orders
-// ===============================
-exports.getOrders = async (req, res) => {
+
+
+
+
+// Get all Orders with populate
+export const getOrders = async (req, res) => {
   try {
-    const { search, status, startDate, endDate } = req.query;
-    let filter = {};
-
-    if (search) {
-      filter.$or = [
-        !isNaN(search) ? { orderNo: Number(search) } : null,
-        { category: { $regex: search, $options: "i" } },
-        { service: { $regex: search, $options: "i" } },
-      ].filter(Boolean);
-    }
-
-    if (status && status !== "all") {
-      filter.status = status.toLowerCase();
-    }
-
-    if (startDate || endDate) {
-      filter.createdAt = {};
-      if (startDate) filter.createdAt.$gte = new Date(startDate);
-      if (endDate) filter.createdAt.$lte = new Date(endDate);
-    }
-
-    const orders = await Order.find(filter)
-      .populate("customer", "name phone")
-      .populate("createdBy", "name")
-      .populate({
-        path: "tasks",
-        populate: [
-          { path: "assignedTo", select: "name role" },
-          { path: "assignedBy", select: "name role" },
-        ],
-      })
-      .sort({ createdAt: -1 })
-      .lean();
-
-    res.status(200).json({ success: true, data: orders });
+    const orders = await Order.find()
+      .populate("customer")
+      .populate("service")
+      .populate("payment");
+    res.json(orders);
   } catch (error) {
-    res.status(500).json({ success: false, message: "Error fetching orders", error: error.message });
+    res.status(500).json({ message: "Error fetching orders", error });
   }
 };
 
-// ===============================
-// Get Single Order
-// ===============================
-exports.getOrderById = async (req, res) => {
+// Get single Order
+export const getOrderById = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id)
-      .populate("customer", "name phone email")
-      .populate("createdBy", "name")
-      .populate({
-        path: "tasks",
-        populate: [
-          { path: "assignedTo", select: "name role" },
-          { path: "assignedBy", select: "name role" },
-        ],
-      });
-
-    if (!order) return res.status(404).json({ success: false, message: "Order not found" });
-
-    res.status(200).json({ success: true, data: order });
+      .populate("customer")
+      .populate("service")
+      .populate("payment");
+    if (!order) return res.status(404).json({ message: "Order not found" });
+    res.json(order);
   } catch (error) {
-    res.status(500).json({ success: false, message: "Error fetching order", error: error.message });
-  }
-};
-
-// ===============================
-// Update Order (with workflow sync)
-// ===============================
-exports.updateOrder = async (req, res) => {
-  try {
-    const { status } = req.body;
-    const order = await Order.findById(req.params.id);
-
-    if (!order) return res.status(404).json({ success: false, message: "Order not found" });
-
-    // If status is being updated, also sync stage fields + tasks
-    if (status) {
-      const now = new Date();
-      switch (status) {
-        case "cutting":
-          order.cuttingStage = { updatedBy: req.user._id, updatedAt: now };
-          await Task.updateMany(
-            { order: order._id, stage: "Cutter", status: { $ne: "done" } },
-            { status: "done", completedAt: now }
-          );
-          break;
-
-        case "handworking":
-          order.handworkStage = { updatedBy: req.user._id, updatedAt: now };
-          await Task.updateMany(
-            { order: order._id, stage: "Handworker", status: { $ne: "done" } },
-            { status: "done", completedAt: now }
-          );
-          break;
-
-        case "tailoring":
-          order.tailoringStage = { updatedBy: req.user._id, updatedAt: now };
-          await Task.updateMany(
-            { order: order._id, stage: "Tailor", status: { $ne: "done" } },
-            { status: "done", completedAt: now }
-          );
-          break;
-
-        case "quality-check":
-          order.qualityCheckStage = { updatedBy: req.user._id, updatedAt: now };
-          break;
-
-        case "ready-to-delivery":
-          order.completedStage = { updatedBy: req.user._id, updatedAt: now };
-          await Task.updateMany(
-            { order: order._id, status: { $ne: "done" } },
-            { status: "done", completedAt: now }
-          );
-          break;
-      }
-    }
-
-    Object.assign(order, req.body);
-    await order.save();
-
-    res.status(200).json({ success: true, message: "Order updated successfully", data: order });
-  } catch (error) {
-    res.status(500).json({ success: false, message: "Error updating order", error: error.message });
-  }
-};
-
-// ===============================
-// Delete Order
-// ===============================
-exports.deleteOrder = async (req, res) => {
-  try {
-    const order = await Order.findByIdAndDelete(req.params.id);
-    if (!order) return res.status(404).json({ success: false, message: "Order not found" });
-
-    await Task.deleteMany({ order: order._id }); // cleanup tasks
-
-    res.status(200).json({ success: true, message: "Order and related tasks deleted successfully" });
-  } catch (error) {
-    res.status(500).json({ success: false, message: "Error deleting order", error: error.message });
+    res.status(500).json({ message: "Error fetching order", error });
   }
 };

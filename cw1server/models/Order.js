@@ -3,78 +3,67 @@ const mongoose = require("mongoose");
 const orderSchema = new mongoose.Schema(
   {
     orderNo: {
-      type: Number,
-      required: true,
-      unique: true,
-    },
-
-    customer: { type: mongoose.Schema.Types.ObjectId, ref: "Customer", required: true },
-    category: { type: String, required: true },
-    service: { type: String, required: true },
-    design: String,
-
-    rawMaterial: {
-      isProvided: { type: Boolean, default: false },
-      name: String,
-      price: Number,
-    },
-
-    expectedDate: Date,
-
-    // 💰 Payment Details
-    totalAmount: { type: Number, required: true },
-    advanceAmount: { type: Number, default: 0 },
-    pendingAmount: { type: Number, default: 0 },
-    extraCharges: { type: Number, default: 0 },
-    paymentMethod: {
       type: String,
-      enum: ["cash", "card", "qr", "upi", "other"],
-      default: "cash",
+      unique: true, // ✅ no required, hook will always generate it
     },
-
-    // 📌 Workflow current status
+    customer: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Customer",
+      required: true,
+    },
+    service: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Service",
+      required: true,
+    },
+    measurements: [
+      { fieldName: { type: String }, value: { type: String } },
+    ],
+    designImage: { type: String }, // store path to uploaded image
+    color: { type: String },
+    rawMaterial: {
+      cloth: { type: Boolean, default: false },
+      lining: { type: Boolean, default: false },
+    },
+    expectedDate: { type: Date, required: true },
+    payment: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Payment",
+      required: true,
+    },
     status: {
       type: String,
       enum: [
-        "placed",          // Order received
-        "cutting",         // Cutting stage
-        "handworking",     // Handwork stage
-        "tailoring",       // Tailoring stage
-        "quality-check",   // QC stage
-        "ready-to-delivery" // Final stage before delivery
+        "Placed",
+        "Cutting",
+        "Handworking",
+        "Stitching",
+        "Quality Check",
+        "Ready to Deliver",
+        "Delivered",
       ],
-      default: "placed",
+      default: "Placed",
     },
-
-    // 🔗 Relations
-    tasks: [{ type: mongoose.Schema.Types.ObjectId, ref: "Task" }],
-    measurement: [{ type: mongoose.Schema.Types.ObjectId, ref: "Measurement" }],
-
-    // 📝 Stage-specific updates
-    cuttingStage: {
-      updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Staff" },
-      updatedAt: Date,
-    },
-    handworkStage: {
-      updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Staff" },
-      updatedAt: Date,
-    },
-    tailoringStage: {
-      updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Staff" },
-      updatedAt: Date,
-    },
-    finishingStage: {
-      updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Staff" },
-      updatedAt: Date,
-    },
-    qualityCheckStage: {
-      updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Staff" },
-      updatedAt: Date,
-    },
-
-    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "Staff" },
   },
   { timestamps: true }
 );
+
+// 🔑 Auto-generate orderNo
+orderSchema.pre("save", async function (next) {
+  if (!this.orderNo) {
+    const lastOrder = await this.constructor.findOne().sort({ createdAt: -1 });
+
+    let nextNumber = 1;
+    if (lastOrder?.orderNo) {
+      const lastNumber = parseInt(lastOrder.orderNo.split("-")[1], 10);
+      if (!isNaN(lastNumber)) {
+        nextNumber = lastNumber + 1;
+      }
+    }
+
+    this.orderNo = `ORD-${String(nextNumber).padStart(3, "0")}`;
+  }
+  next();
+});
 
 module.exports = mongoose.model("Order", orderSchema);

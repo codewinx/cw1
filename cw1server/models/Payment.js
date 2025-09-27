@@ -1,31 +1,25 @@
 const mongoose = require("mongoose");
 
+const extraChargesSchema = new mongoose.Schema({
+  amount: { type: Number, default: 0 },
+  note: { type: String },
+});
+
 const paymentSchema = new mongoose.Schema(
   {
-    order: { 
-      type: mongoose.Schema.Types.ObjectId, 
-      ref: "Order", 
-      required: true 
-    }, // 🔗 link to order
-
-    amount: { type: Number, required: true }, // how much paid in this transaction
-
-    method: {
+    totalAmount: { type: Number, required: true },
+    advanceAmount: { type: Number, default: 0 },
+    extraCharges: extraChargesSchema,
+    paymentMode: {
       type: String,
-      enum: ["cash", "card", "qr", "upi", "other"],
+      enum: ["Cash", "UPI", "Card", "Bank Transfer"],
       required: true,
     },
-
-    transactionId: { type: String }, // for UPI/Card/Online
-
-    remarks: { type: String }, // optional notes like "Advance", "Final Payment"
-
-    collectedBy: { 
-      type: mongoose.Schema.Types.ObjectId, 
-      ref: "Staff" 
-    }, // who received payment
-
-    paymentDate: { type: Date, default: Date.now },
+    status: {
+      type: String,
+      enum: ["Pending", "Completed"],
+      default: "Pending",
+    },
   },
   { timestamps: true }
 );

@@ -1,19 +1,12 @@
-const mongoose = require("mongoose");
+// models/Customer.js
+import mongoose from "mongoose";
 
-const customerSchema = new mongoose.Schema(
-  {
-    name: { type: String, required: true },
-    email: String,
-    phone: { type: String, required: true },
-    address: String,
-    gender: { type: String, enum: ["male", "female", "other"] },
-    createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Staff",
-      required: true,
-    },
-  },
-  { timestamps: true }
-);
+const customerSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  email: { type: String, unique: true, sparse: true },
+  phone: { type: String, required: true, unique: true },
+  address: { type: String },
+  gender: { type: String, enum: ["Male", "Female", "Other"] },
+});
 
-module.exports = mongoose.model("Customer", customerSchema);
+export default mongoose.model("Customer", customerSchema);

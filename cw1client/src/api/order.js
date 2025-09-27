@@ -1,55 +1,56 @@
-// src/api/order.js
 import api from "./axios";
 
-// 📌 Create a new order
+// 📌 Create a new order (with FormData)
 export const createOrder = async (orderData) => {
-  try {
-    const response = await api.post("/api/order/create", orderData);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { message: "Error while adding order" };
-  }
+  try {
+    const response = await api.post("/api/order", orderData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    return response.data; // { message, order }
+  } catch (error) {
+    throw error.response?.data || { message: "Error while creating order" };
+  }
 };
 
-// 📌 Get all orders (with optional filters: search, status)
+// 📌 Get all orders (optional filters: search, status)
 export const getOrders = async (params = {}) => {
-  try {
-    const query = new URLSearchParams(params).toString(); 
-    const response = await api.get(`/api/order${query ? `?${query}` : ""}`);
-    // Corrected line: return the data array
-    return response.data.data;
-  } catch (error) {
-    throw error.response?.data || { message: "Error while fetching orders" };
-  }
+  try {
+    const query = new URLSearchParams(params).toString();
+    const response = await api.get(`/api/order${query ? `?${query}` : ""}`);
+    return response.data; // plain array of orders
+  } catch (error) {
+    throw error.response?.data || { message: "Error while fetching orders" };
+  }
 };
 
 // 📌 Get single order by ID
 export const getOrderById = async (orderId) => {
-  try {
-    const response = await api.get(`/api/order/${orderId}`);
-    // Corrected line: return the data object
-    return response.data.data;
-  } catch (error) {
-    throw error.response?.data || { message: "Error while fetching order" };
-  }
+  try {
+    const response = await api.get(`/api/order/${orderId}`);
+    return response.data; // plain order object
+  } catch (error) {
+    throw error.response?.data || { message: "Error while fetching order" };
+  }
 };
 
 // 📌 Update an order
-export const updateOrder = async (orderId, orderData) => {
-  try {
-    const response = await api.put(`/api/order/${orderId}`, orderData);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { message: "Error while updating order" };
-  }
+export const updateOrder = async (orderId, updatedData) => {
+  try {
+    const response = await api.put(`/api/order/${orderId}`, updatedData);
+    return response.data; // updated order
+  } catch (error) {
+    throw error.response?.data || { message: "Error while updating order" };
+  }
 };
 
 // 📌 Delete an order
 export const deleteOrder = async (orderId) => {
-  try {
-    const response = await api.delete(`/api/order/${orderId}`);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { message: "Error while deleting order" };
-  }
+  try {
+    const response = await api.delete(`/api/order/${orderId}`);
+    return response.data; // { message: "Order deleted" }
+  } catch (error) {
+    throw error.response?.data || { message: "Error while deleting order" };
+  }
 };
