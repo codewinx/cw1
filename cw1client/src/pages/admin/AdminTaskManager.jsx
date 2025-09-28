@@ -1,1045 +1,284 @@
-// // src/pages/admin/AdminTaskManager.jsx
-// import React, { useEffect, useState } from "react";
-// import { getOrders } from "../../api/order";
-// import { getAllStaff } from "../../api/staff";
-// import { assignTask } from "../../api/task";
-// import { getMeasurementsByCustomerId } from "../../api/measurement";
-
-// const ROLE_MAP = {
-//   Cutter: "Cutter",
-//   Tailor: "Tailor",
-//   Handworker: "Handworker",
-// };
-
-// const STATUS_COLORS = {
-//   Pending: "bg-yellow-100 text-yellow-800",
-//   "In Progress": "bg-blue-100 text-blue-800",
-//   Completed: "bg-green-100 text-green-800",
-//   Cancelled: "bg-red-100 text-red-800",
-// };
-
-// const RoleProgressBar = ({ tasks = [] }) => {
-//   const ROLE_ORDER = ["Cutter", "Tailor", "Handworker"];
-
-//   return (
-//     <div className="flex items-center w-full justify-between">
-//       {ROLE_ORDER.map((role, index) => {
-//         const task = tasks.find((t) => t.stage === role);
-//         const taskStatus = task?.status || "Not Assigned";
-//         const isCompleted = taskStatus === "Completed";
-//         const isCurrent = taskStatus === "In Progress";
-//         const previousTask = tasks.find((t) => t.stage === ROLE_ORDER[index - 1]);
-//         const previousTaskCompleted = previousTask?.status === "Completed";
-//         const connectorColor = previousTaskCompleted ? "bg-green-500" : "bg-gray-300";
-//         const activeColor = isCompleted ? "bg-green-500" : isCurrent ? "bg-blue-500" : "bg-gray-300";
-
-//         return (
-//           <React.Fragment key={role}>
-//             {index > 0 && (
-//               <div className={`h-1 flex-1 transition-colors duration-300 ${connectorColor}`}></div>
-//             )}
-//             <div className={`relative w-8 h-8 rounded-full flex items-center justify-center text-white font-bold transition-colors duration-300 ${activeColor}`}>
-//               <span className="text-xs">{index + 1}</span>
-//             </div>
-//           </React.Fragment>
-//         );
-//       })}
-//     </div>
-//   );
-// };
-
-// const AdminTaskManager = () => {
-//   const [orders, setOrders] = useState([]);
-//   const [staff, setStaff] = useState([]);
-//   const [selectedOrder, setSelectedOrder] = useState(null);
-//   const [selectedWorkers, setSelectedWorkers] = useState({});
-//   const [measurements, setMeasurements] = useState([]);
-//   const [loading, setLoading] = useState(true);
-//   const [searchTerm, setSearchTerm] = useState("");
-//   const [statusFilter, setStatusFilter] = useState("");
-
-//   useEffect(() => {
-//     const fetchData = async () => {
-//       try {
-//         setLoading(true);
-//         const [orderData, staffData] = await Promise.all([
-//           getOrders(),
-//           getAllStaff(),
-//         ]);
-
-//         setOrders(orderData.data || orderData);
-//         setStaff(staffData.data || []);
-//       } catch (err) {
-//         console.error("Error fetching data:", err);
-//       } finally {
-//         setLoading(false);
-//       }
-//     };
-//     fetchData();
-//   }, []);
-
-//   useEffect(() => {
-//     const fetchMeasurements = async () => {
-//       if (selectedOrder?.customer?._id) {
-//         try {
-//           const data = await getMeasurementsByCustomerId(
-//             selectedOrder.customer._id
-//           );
-//           setMeasurements(data);
-//         } catch (err) {
-//           console.error("Error fetching measurements:", err);
-//           setMeasurements([]);
-//         }
-//       }
-//     };
-//     fetchMeasurements();
-//   }, [selectedOrder]);
-
-//   const filteredOrders = orders.filter((order) => {
-//     const searchLower = searchTerm.toLowerCase();
-//     const matchesSearch =
-//       !searchTerm ||
-//       (order.orderNo &&
-//         String(order.orderNo).toLowerCase().includes(searchLower)) ||
-//       (order.customer?.name &&
-//         order.customer.name.toLowerCase().includes(searchLower)) ||
-//       (order.category && order.category.toLowerCase().includes(searchLower)) ||
-//       (order.service && order.service.toLowerCase().includes(searchLower));
-
-//     const matchesStatus = !statusFilter || order.status === statusFilter;
-
-//     return matchesSearch && matchesStatus;
-//   });
-
-//   const handleAssign = async (role) => {
-//     const workerData = selectedWorkers[role];
-//     const currentTask = selectedOrder?.tasks?.find((t) => t.stage === role);
-
-//     const staffId = workerData?.staffId || currentTask?.assignedTo?._id;
-//     const deadline = workerData?.deadline || currentTask?.deadline;
-
-//     if (!staffId) {
-//       alert("Please select a worker before assigning.");
-//       return;
-//     }
-
-//     try {
-//       await assignTask({
-//         orderId: selectedOrder._id,
-//         staffId,
-//         stage: role,
-//         deadline,
-//       });
-
-//       alert(`${role} task assigned successfully ✅`);
-
-//       const orderData = await getOrders();
-//       setOrders(orderData.data || orderData);
-
-//       const updated = (orderData.data || orderData).find(
-//         (o) => o._id === selectedOrder._id
-//       );
-//       setSelectedOrder(updated);
-
-//       setSelectedWorkers((prev) => ({ ...prev, [role]: {} }));
-//     } catch (err) {
-//       alert(err.response?.data?.error || "Failed to assign task");
-//     }
-//   };
-
-//   const RoleAssignmentCard = ({ role, label }) => {
-//     const currentTask = selectedOrder?.tasks?.find((t) => t.stage === role);
-//     const assignedStaff = currentTask?.assignedTo?._id || "";
-//     const assignedDeadline = currentTask?.deadline;
-//     const formattedDeadline = assignedDeadline
-//       ? new Date(assignedDeadline).toISOString().split("T")[0]
-//       : "";
-//     const taskStatus = currentTask?.status || "Not Assigned";
-
-//     return (
-//       <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
-//         <div className="flex items-center justify-between mb-4">
-//           <h3 className="text-lg font-semibold text-gray-900">{label}</h3>
-//           <span
-//             className={`px-3 py-1 rounded-full text-xs font-medium ${
-//               currentTask
-//                 ? STATUS_COLORS[taskStatus] ||
-//                   "bg-gray-100 text-gray-800"
-//                 : "bg-gray-100 text-gray-600"
-//             }`}
-//           >
-//             {taskStatus}
-//           </span>
-//         </div>
-
-//         <div className="space-y-4">
-//           <div>
-//             <label className="block text-sm font-medium text-gray-700 mb-2">
-//               Select Worker
-//             </label>
-//             <select
-//               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-//               value={selectedWorkers[role]?.staffId || assignedStaff}
-//               onChange={(e) =>
-//                 setSelectedWorkers((prev) => ({
-//                   ...prev,
-//                   [role]: { ...(prev[role] || {}), staffId: e.target.value },
-//                 }))
-//               }
-//             >
-//               <option value="">Choose a worker...</option>
-//               {staff
-//                 .filter(
-//                   (s) => s.role?.toLowerCase() === role.toLowerCase()
-//                 )
-//                 .map((s) => (
-//                   <option key={s._id} value={s._id}>
-//                     {s.name}{" "}
-//                     {currentTask?.assignedTo?._id === s._id && "(Current)"}
-//                   </option>
-//                 ))}
-//             </select>
-//           </div>
-
-//           <div>
-//             <label className="block text-sm font-medium text-gray-700 mb-2">
-//               Deadline
-//             </label>
-//             <input
-//               type="date"
-//               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-//               value={selectedWorkers[role]?.deadline || formattedDeadline}
-//               onChange={(e) =>
-//                 setSelectedWorkers((prev) => ({
-//                   ...prev,
-//                   [role]: { ...(prev[role] || {}), deadline: e.target.value },
-//                 }))
-//               }
-//             />
-//           </div>
-
-//           {currentTask && (
-//             <div className="bg-gray-50 rounded-lg p-3">
-//               <p className="text-sm text-gray-600">
-//                 <span className="font-medium">Current:</span>{" "}
-//                 {currentTask.assignedTo?.name}
-//               </p>
-//               {assignedDeadline && (
-//                 <p className="text-sm text-gray-600">
-//                   <span className="font-medium">Deadline:</span>{" "}
-//                   {new Date(assignedDeadline).toLocaleDateString()}
-//                 </p>
-//               )}
-//             </div>
-//           )}
-
-//           <button
-//             onClick={() => handleAssign(role)}
-//             className={`w-full py-2 px-4 rounded-lg font-medium transition-colors ${
-//               currentTask
-//                 ? "bg-orange-500 hover:bg-orange-600 text-white"
-//                 : "bg-blue-600 hover:bg-blue-700 text-white"
-//             }`}
-//           >
-//             {currentTask ? "Re-assign Task" : "Assign Task"}
-//           </button>
-//         </div>
-//       </div>
-//     );
-//   };
-
-//   if (loading) {
-//     return (
-//       <div className="flex items-center justify-center min-h-screen bg-gray-50">
-//         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-//       </div>
-//     );
-//   }
-
-//   return (
-//     <div className="min-h-screen bg-gray-50">
-//       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-//         <div className="mb-8">
-//           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-//             Task Management Center
-//           </h1>
-//           <p className="text-gray-600">
-//             Assign and manage tasks across your team efficiently
-//           </p>
-//         </div>
-
-//         {!selectedOrder ? (
-//           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-//             <div className="p-6 border-b border-gray-200">
-//               <div className="flex flex-col sm:flex-row gap-4">
-//                 <div className="flex-1">
-//                   <input
-//                     type="text"
-//                     placeholder="Search by order number, customer name, or category..."
-//                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-//                     value={searchTerm}
-//                     onChange={(e) => setSearchTerm(e.target.value)}
-//                   />
-//                 </div>
-//                 <div className="sm:w-48">
-//                   <select
-//                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-//                     value={statusFilter}
-//                     onChange={(e) => setStatusFilter(e.target.value)}
-//                   >
-//                     <option value="">All Statuses</option>
-//                     <option value="Pending">Pending</option>
-//                     <option value="In Progress">In Progress</option>
-//                     <option value="Completed">Completed</option>
-//                   </select>
-//                 </div>
-//               </div>
-//             </div>
-
-//             <div className="overflow-x-auto">
-//               <table className="min-w-full">
-//                 <thead className="bg-gray-50 border-b border-gray-200">
-//                   <tr>
-//                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase">
-//                       Order Details
-//                     </th>
-//                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase">
-//                       Customer
-//                     </th>
-//                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase">
-//                       Service Info
-//                     </th>
-//                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase">
-//                       Status
-//                     </th>
-//                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase">
-//                       Task Progress
-//                     </th>
-//                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase">
-//                       Actions
-//                     </th>
-//                   </tr>
-//                 </thead>
-//                 <tbody className="divide-y divide-gray-200">
-//                   {filteredOrders.length > 0 ? (
-//                     filteredOrders.map((order) => {
-//                       const tasksAssigned = order.tasks?.length || 0;
-//                       const totalTasks = Object.keys(ROLE_MAP).length;
-
-//                       return (
-//                         <tr
-//                           key={order._id}
-//                           className="hover:bg-gray-50 transition-colors"
-//                         >
-//                           <td className="px-6 py-4 whitespace-nowrap">
-//                             <div>
-//                               <div className="text-sm font-medium text-gray-900">
-//                                 #{order.orderNo}
-//                               </div>
-//                               <div className="text-sm text-gray-500">
-//                                 {new Date(order.createdAt).toLocaleDateString()}
-//                               </div>
-//                             </div>
-//                           </td>
-//                           <td className="px-6 py-4 whitespace-nowrap">
-//                             <div className="text-sm font-medium text-gray-900">
-//                               {order.customer?.name}
-//                             </div>
-//                           </td>
-//                           <td className="px-6 py-4 whitespace-nowrap">
-//                             <div className="text-sm text-gray-900">
-//                               {order.category}
-//                             </div>
-//                             <div className="text-sm text-gray-500">
-//                               {order.service}
-//                             </div>
-//                           </td>
-//                           <td className="px-6 py-4 whitespace-nowrap">
-//                             <span
-//                               className={`px-3 py-1 rounded-full text-xs font-medium ${
-//                                 STATUS_COLORS[order.status] ||
-//                                 "bg-gray-100 text-gray-800"
-//                               }`}
-//                             >
-//                               {order.status}
-//                             </span>
-//                           </td>
-//                           <td className="px-6 py-4">
-//                             <RoleProgressBar tasks={order.tasks} />
-//                           </td>
-//                           <td className="px-6 py-4 whitespace-nowrap">
-//                             <button
-//                               onClick={() => setSelectedOrder(order)}
-//                               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-//                                 tasksAssigned > 0
-//                                   ? "bg-orange-100 text-orange-700 hover:bg-orange-200"
-//                                   : "bg-blue-100 text-blue-700 hover:bg-blue-200"
-//                               }`}
-//                             >
-//                               {tasksAssigned > 0
-//                                 ? "Manage Tasks"
-//                                 : "Assign Tasks"}
-//                             </button>
-//                           </td>
-//                         </tr>
-//                       );
-//                     })
-//                   ) : (
-//                     <tr>
-//                       <td
-//                         colSpan="6"
-//                         className="px-6 py-12 text-center text-gray-500"
-//                       >
-//                         No orders found matching your criteria
-//                       </td>
-//                     </tr>
-//                   )}
-//                 </tbody>
-//               </table>
-//             </div>
-//           </div>
-//         ) : (
-//           <div className="space-y-6">
-//             <div className="bg-white rounded-xl shadow-sm p-6">
-//               <div className="flex items-center justify-between">
-//                 <div>
-//                   <h2 className="text-2xl font-bold text-gray-900 mb-2">
-//                     Order #{selectedOrder.orderNo}
-//                   </h2>
-//                   <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
-//                     <span>Customer: {selectedOrder.customer?.name}</span>
-//                     <span>•</span>
-//                     <span>
-//                       Date:{" "}
-//                       {new Date(selectedOrder.createdAt).toLocaleDateString()}
-//                     </span>
-//                     <span>•</span>
-//                     <span>Category: {selectedOrder.category}</span>
-//                     <span>•</span>
-//                     <span>Service: {selectedOrder.service}</span>
-//                   </div>
-//                 </div>
-//                 <button
-//                   onClick={() => setSelectedOrder(null)}
-//                   className="px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
-//                 >
-//                   ← Back to Orders
-//                 </button>
-//               </div>
-//             </div>
-
-//             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-//               {Object.entries(ROLE_MAP).map(([key, label]) => (
-//                 <RoleAssignmentCard key={key} role={key} label={label} />
-//               ))}
-//             </div>
-
-//             <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-//               <div className="px-6 py-4 border-b border-gray-200">
-//                 <h3 className="text-lg font-semibold text-gray-900">
-//                   Task Assignment Summary
-//                 </h3>
-//               </div>
-//               <div className="overflow-x-auto">
-//                 <table className="w-full">
-//                   <thead className="bg-gray-50">
-//                     <tr>
-//                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-//                         Role
-//                       </th>
-//                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-//                         Assigned To
-//                       </th>
-//                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-//                         Deadline
-//                       </th>
-//                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-//                         Status
-//                       </th>
-//                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-//                         Assigned By
-//                       </th>
-//                     </tr>
-//                   </thead>
-//                   <tbody className="divide-y divide-gray-200">
-//                     {Object.keys(ROLE_MAP).map((role) => {
-//                       const task = selectedOrder.tasks?.find(
-//                         (t) => t.stage === role
-//                       );
-//                       return (
-//                         <tr key={role}>
-//                           <td className="px-6 py-4 whitespace-nowrap">
-//                             {ROLE_MAP[role]}
-//                           </td>
-//                           <td className="px-6 py-4 whitespace-nowrap">
-//                             {task?.assignedTo?.name || "-"}
-//                           </td>
-//                           <td className="px-6 py-4 whitespace-nowrap">
-//                             {task?.deadline
-//                               ? new Date(task.deadline).toLocaleDateString()
-//                               : "-"}
-//                           </td>
-//                           <td className="px-6 py-4 whitespace-nowrap">
-//                             <span
-//                               className={`px-2 py-1 rounded-full text-xs font-medium ${
-//                                 task
-//                                   ? STATUS_COLORS[task.status] ||
-//                                     "bg-gray-100 text-gray-800"
-//                                   : "bg-gray-100 text-gray-600"
-//                               }`}
-//                             >
-//                               {task?.status || "Not Assigned"}
-//                             </span>
-//                           </td>
-//                           <td className="px-6 py-4 whitespace-nowrap">
-//                             <span className="text-sm text-gray-900">
-//                               {task?.assignedBy?.name || "-"}
-//                             </span>
-//                           </td>
-//                         </tr>
-//                       );
-//                     })}
-//                   </tbody>
-//                 </table>
-//               </div>
-//             </div>
-
-//             <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-//               <div className="px-6 py-4 border-b border-gray-200">
-//                 <h3 className="text-lg font-semibold text-gray-900">Customer Measurements</h3>
-//               </div>
-//               {measurements?.length > 0 ? (
-//                 <div className="overflow-x-auto">
-//                   <table className="w-full">
-//                     <thead className="bg-gray-50">
-//                       <tr>
-//                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
-//                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Measurements</th>
-//                       </tr>
-//                     </thead>
-//                     <tbody className="divide-y divide-gray-200">
-//                       {measurements.map((m) => (
-//                         <tr key={m._id}>
-//                           <td className="px-6 py-4 whitespace-nowrap">
-//                             <span className="text-sm font-medium text-gray-900">{m.category}</span>
-//                           </td>
-//                           <td className="px-6 py-4">
-//                             <div className="text-sm text-gray-900">
-//                               {m.data?.length > 0 ? (
-//                                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-//                                   {m.data.map((d, index) => (
-//                                     <span
-//                                       key={index}
-//                                       className="bg-gray-100 px-2 py-1 rounded text-xs"
-//                                     >
-//                                       {d.key}: {d.value}
-//                                     </span>
-//                                   ))}
-//                                 </div>
-//                               ) : (
-//                                 "-"
-//                               )}
-//                             </div>
-//                           </td>
-//                         </tr>
-//                       ))}
-//                     </tbody>
-//                   </table>
-//                 </div>
-//               ) : (
-//                 <div className="p-6 text-center text-gray-500">
-//                   <svg
-//                     className="mx-auto h-12 w-12 text-gray-400 mb-4"
-//                     fill="none"
-//                     viewBox="0 0 24 24"
-//                     stroke="currentColor"
-//                   >
-//                     <path
-//                       strokeLinecap="round"
-//                       strokeLinejoin="round"
-//                       strokeWidth={2}
-//                       d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 
-//                       0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 
-//                       0a2 2 0 002 2h2a2 2 0 002-2m0 
-//                       0V5a2 2 0 012-2h2a2 2 0 012 
-//                       2v14a2 2 0 01-2 2h-2a2 2 
-//                       0 01-2-2z"
-//                     />
-//                   </svg>
-//                   No measurements found for this customer
-//                 </div>
-//               )}
-//             </div>
-//           </div>
-//         )}
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default AdminTaskManager;
-// src/pages/admin/AdminTaskManager.jsx
 import React, { useEffect, useState } from "react";
-import { getOrders } from "../../api/order";
-import { getAllStaff } from "../../api/staff";
-import { assignTask } from "../../api/task";
-import { getMeasurementsByCustomerId } from "../../api/measurement";
-
-const ROLE_MAP = {
-  Cutter: "Cutter",
-  Tailor: "Tailor",
-  Handworker: "Handworker",
-};
-
-// ✅ Role assignment flexibility
-const ROLE_ASSIGNMENT_MAP = {
-  Cutter: ["Cutter", "Manager"], // allow Cutter & Manager
-  Tailor: ["Tailor"],
-  Handworker: ["Handworker"],
-};
+import { getAssignableStaff, assignTask, getOrdersWithItems } from "../../api/task";
 
 const STATUS_COLORS = {
-  Pending: "bg-yellow-100 text-yellow-800",
-  "In Progress": "bg-blue-100 text-blue-800",
-  Completed: "bg-green-100 text-green-800",
-  Cancelled: "bg-red-100 text-red-800",
-};
-
-const RoleProgressBar = ({ tasks = [] }) => {
-  const ROLE_ORDER = ["Cutter", "Tailor", "Handworker"];
-
-  return (
-    <div className="flex items-center w-full justify-between">
-      {ROLE_ORDER.map((role, index) => {
-        const task = tasks.find((t) => t.stage === role);
-        const taskStatus = task?.status || "Not Assigned";
-        const isCompleted = taskStatus === "Completed";
-        const isCurrent = taskStatus === "In Progress";
-        const previousTask = tasks.find((t) => t.stage === ROLE_ORDER[index - 1]);
-        const previousTaskCompleted = previousTask?.status === "Completed";
-        const connectorColor = previousTaskCompleted ? "bg-green-500" : "bg-gray-300";
-        const activeColor = isCompleted ? "bg-green-500" : isCurrent ? "bg-blue-500" : "bg-gray-300";
-
-        return (
-          <React.Fragment key={role}>
-            {index > 0 && (
-              <div className={`h-1 flex-1 transition-colors duration-300 ${connectorColor}`}></div>
-            )}
-            <div
-              className={`relative w-8 h-8 rounded-full flex items-center justify-center text-white font-bold transition-colors duration-300 ${activeColor}`}
-            >
-              <span className="text-xs">{index + 1}</span>
-            </div>
-          </React.Fragment>
-        );
-      })}
-    </div>
-  );
+  pending: "bg-yellow-100 text-yellow-800",
+  "in-progress": "bg-blue-100 text-blue-800",
+  done: "bg-green-100 text-green-800",
+  reassigned: "bg-orange-100 text-orange-800",
+  "Not Assigned": "bg-gray-100 text-gray-600"
 };
 
 const AdminTaskManager = () => {
-  const [orders, setOrders] = useState([]);
-  const [staff, setStaff] = useState([]);
+  const [ordersWithItems, setOrdersWithItems] = useState([]);
+  const [assignableStaff, setAssignableStaff] = useState({});
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [selectedItem, setSelectedItem] = useState(null);
   const [selectedWorkers, setSelectedWorkers] = useState({});
-  const [measurements, setMeasurements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [message, setMessage] = useState({ type: '', text: '' });
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchOrders = async () => {
       try {
         setLoading(true);
-        const [orderData, staffData] = await Promise.all([getOrders(), getAllStaff()]);
-        setOrders(orderData.data || orderData);
-        setStaff(staffData.data || []);
+        const ordersData = await getOrdersWithItems();
+        setOrdersWithItems(ordersData.data || ordersData);
       } catch (err) {
-        console.error("Error fetching data:", err);
+        console.error("Error fetching orders:", err);
+        showMessage("error", "Failed to load orders");
       } finally {
         setLoading(false);
       }
     };
-    fetchData();
+    fetchOrders();
   }, []);
 
+  const showMessage = (type, text) => {
+    setMessage({ type, text });
+    setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+  };
+
   useEffect(() => {
-    const fetchMeasurements = async () => {
-      if (selectedOrder?.customer?._id) {
-        try {
-          const data = await getMeasurementsByCustomerId(selectedOrder.customer._id);
-          setMeasurements(data);
-        } catch (err) {
-          console.error("Error fetching measurements:", err);
-          setMeasurements([]);
-        }
+    const fetchStaff = async () => {
+      const serviceId = selectedOrder?.mainOrder?.service?._id;
+      if (!serviceId) return;
+      try {
+        const staffData = await getAssignableStaff(serviceId);
+        setAssignableStaff(prev => ({
+          ...prev,
+          [serviceId]: staffData.data || staffData
+        }));
+      } catch (err) {
+        console.error("Error fetching staff:", err);
       }
     };
-    fetchMeasurements();
+    fetchStaff();
   }, [selectedOrder]);
 
-  const filteredOrders = orders.filter((order) => {
+  const filteredOrders = ordersWithItems.filter(orderGroup => {
+    const order = orderGroup.mainOrder;
     const searchLower = searchTerm.toLowerCase();
     const matchesSearch =
       !searchTerm ||
       (order.orderNo && String(order.orderNo).toLowerCase().includes(searchLower)) ||
       (order.customer?.name && order.customer.name.toLowerCase().includes(searchLower)) ||
-      (order.category && order.category.toLowerCase().includes(searchLower)) ||
-      (order.service && order.service.toLowerCase().includes(searchLower));
+      (order.service?.category && order.service.category.toLowerCase().includes(searchLower)) ||
+      (order.service?.name && order.service.name.toLowerCase().includes(searchLower));
 
     const matchesStatus = !statusFilter || order.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
-  const handleAssign = async (role) => {
+  const handleAssignTask = async (role, itemId = null) => {
     const workerData = selectedWorkers[role];
-    const currentTask = selectedOrder?.tasks?.find((t) => t.stage === role);
+    if (!workerData?.staffId) {
+      showMessage("error", "Please select a worker before assigning.");
+      return;
+    }
 
-    const staffId = workerData?.staffId || currentTask?.assignedTo?._id;
-    const deadline = workerData?.deadline || currentTask?.deadline;
-
-    if (!staffId) {
-      alert("Please select a worker before assigning.");
+    const orderId = itemId || selectedOrder?.mainOrder?._id;
+    if (!orderId) {
+      showMessage("error", "No order selected.");
       return;
     }
 
     try {
-      await assignTask({
-        orderId: selectedOrder._id,
-        staffId,
+      const taskData = {
+        orderId,
         stage: role,
-        deadline,
-      });
+        staffId: workerData.staffId,
+        deadline: workerData.deadline || null,
+        remarks: `Assigned for ${itemId ? 'item' : 'main order'}`,
+        itemId: itemId || null
+      };
 
-      alert(`${role} task assigned successfully ✅`);
+      const result = await assignTask(taskData);
 
-      const orderData = await getOrders();
-      setOrders(orderData.data || orderData);
-
-      const updated = (orderData.data || orderData).find((o) => o._id === selectedOrder._id);
-      setSelectedOrder(updated);
-
-      setSelectedWorkers((prev) => ({ ...prev, [role]: {} }));
+      if (result.success) {
+        showMessage("success", "Task assigned successfully!");
+        const ordersData = await getOrdersWithItems();
+        setOrdersWithItems(ordersData.data || ordersData);
+        setSelectedWorkers(prev => ({ ...prev, [role]: {} }));
+      } else {
+        showMessage("error", result.message || "Failed to assign task");
+      }
     } catch (err) {
-      alert(err.response?.data?.error || "Failed to assign task");
+      console.error(err);
+      showMessage("error", err.response?.data?.message || "Failed to assign task");
     }
   };
 
-  const RoleAssignmentCard = ({ role, label }) => {
-    const currentTask = selectedOrder?.tasks?.find((t) => t.stage === role);
-    const assignedStaff = currentTask?.assignedTo?._id || "";
-    const assignedDeadline = currentTask?.deadline;
-    const formattedDeadline = assignedDeadline ? new Date(assignedDeadline).toISOString().split("T")[0] : "";
+  const RoleAssignmentCard = ({ role, itemId = null, itemName = null }) => {
+    const currentOrder = itemId ? selectedItem : selectedOrder?.mainOrder;
+    const currentTask = currentOrder?.tasks?.find(
+      t => t.stage === role && (t.itemId || null) === (itemId || null)
+    );
     const taskStatus = currentTask?.status || "Not Assigned";
+    const serviceId = selectedOrder?.mainOrder?.service?._id;
+    const availableStaff = assignableStaff[serviceId] || [];
 
     return (
-      <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">{label}</h3>
-          <span
-            className={`px-3 py-1 rounded-full text-xs font-medium ${
-              currentTask ? STATUS_COLORS[taskStatus] || "bg-gray-100 text-gray-800" : "bg-gray-100 text-gray-600"
-            }`}
-          >
+      <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4 shadow-sm">
+        <div className="flex justify-between items-center mb-3">
+          <h4 className="font-semibold text-gray-800">{role} {itemName && `- ${itemName}`}</h4>
+          <span className={`px-2 py-1 rounded text-xs ${STATUS_COLORS[taskStatus] || STATUS_COLORS["Not Assigned"]}`}>
             {taskStatus}
           </span>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Select Worker</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Select Worker</label>
             <select
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              value={selectedWorkers[role]?.staffId || assignedStaff}
-              onChange={(e) =>
-                setSelectedWorkers((prev) => ({
-                  ...prev,
-                  [role]: { ...(prev[role] || {}), staffId: e.target.value },
-                }))
-              }
+              className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+              value={selectedWorkers[role]?.staffId || currentTask?.assignedTo?._id || ""}
+              onChange={(e) => setSelectedWorkers(prev => ({
+                ...prev,
+                [role]: { ...prev[role], staffId: e.target.value }
+              }))}
             >
-              <option value="">Choose a worker...</option>
-              {staff
-                .filter((s) =>
-                  ROLE_ASSIGNMENT_MAP[role]?.map((r) => r.toLowerCase()).includes(s.role?.toLowerCase())
-                )
-                .map((s) => (
-                  <option key={s._id} value={s._id}>
-                    {s.name} {currentTask?.assignedTo?._id === s._id && "(Current)"}
-                  </option>
-                ))}
+              <option value="">Choose worker...</option>
+              {availableStaff.map(s => (
+                <option key={s._id} value={s._id}>
+                  {s.name} ({s.role}) {s.certified && "⭐"} {s.experience > 0 && `(${s.experience}yrs)`}
+                </option>
+              ))}
             </select>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Deadline</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Deadline</label>
             <input
               type="date"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              value={selectedWorkers[role]?.deadline || formattedDeadline}
-              onChange={(e) =>
-                setSelectedWorkers((prev) => ({
-                  ...prev,
-                  [role]: { ...(prev[role] || {}), deadline: e.target.value },
-                }))
-              }
+              className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+              value={selectedWorkers[role]?.deadline || (currentTask?.deadline ? new Date(currentTask.deadline).toISOString().split('T')[0] : "")}
+              onChange={(e) => setSelectedWorkers(prev => ({
+                ...prev,
+                [role]: { ...prev[role], deadline: e.target.value }
+              }))}
+              min={new Date().toISOString().split('T')[0]}
             />
           </div>
 
           {currentTask && (
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-sm text-gray-600">
-                <span className="font-medium">Current:</span> {currentTask.assignedTo?.name}
-              </p>
-              {assignedDeadline && (
-                <p className="text-sm text-gray-600">
-                  <span className="font-medium">Deadline:</span> {new Date(assignedDeadline).toLocaleDateString()}
-                </p>
-              )}
+            <div className="bg-gray-50 p-2 rounded text-sm">
+              <p><strong>Current:</strong> {currentTask.assignedTo?.name}</p>
+              {currentTask.deadline && <p><strong>Deadline:</strong> {new Date(currentTask.deadline).toLocaleDateString()}</p>}
+              {currentTask.remarks && <p><strong>Remarks:</strong> {currentTask.remarks}</p>}
             </div>
           )}
 
           <button
-            onClick={() => handleAssign(role)}
-            className={`w-full py-2 px-4 rounded-lg font-medium transition-colors ${
-              currentTask ? "bg-orange-500 hover:bg-orange-600 text-white" : "bg-blue-600 hover:bg-blue-700 text-white"
-            }`}
+            onClick={() => handleAssignTask(role, itemId)}
+            className={`w-full py-2 rounded font-medium transition-colors ${currentTask ? "bg-orange-500 hover:bg-orange-600 text-white" : "bg-blue-500 hover:bg-blue-600 text-white"}`}
+            disabled={!selectedWorkers[role]?.staffId}
           >
-            {currentTask ? "Re-assign Task" : "Assign Task"}
+            {currentTask ? "Reassign Task" : "Assign Task"}
           </button>
         </div>
       </div>
     );
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
+  if (loading) return <div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div></div>;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Task Management Center</h1>
-          <p className="text-gray-600">Assign and manage tasks across your team efficiently</p>
-        </div>
+    <div className="container mx-auto p-4 max-w-7xl">
+      {message.text && <div className={`mb-4 p-3 rounded ${message.type === 'error' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>{message.text}</div>}
 
-        {/* === Orders List or Assignment View === */}
-        {!selectedOrder ? (
-          // Order List View
-          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-            {/* Search + Filter */}
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="flex-1">
-                  <input
-                    type="text"
-                    placeholder="Search by order number, customer name, or category..."
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-                <div className="sm:w-48">
-                  <select
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                  >
-                    <option value="">All Statuses</option>
-                    <option value="Pending">Pending</option>
-                    <option value="In Progress">In Progress</option>
-                    <option value="Completed">Completed</option>
-                  </select>
-                </div>
-              </div>
-            </div>
+      <h1 className="text-2xl font-bold mb-2">Task Assignment System</h1>
+      <p className="text-gray-600 mb-6">Assign or Reassign work to staff members</p>
 
-            {/* Orders Table */}
-            <div className="overflow-x-auto">
-              <table className="min-w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase">Order Details</th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase">Service Info</th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase">Task Progress</th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {filteredOrders.length > 0 ? (
-                    filteredOrders.map((order) => {
-                      const tasksAssigned = order.tasks?.length || 0;
-                      return (
-                        <tr key={order._id} className="hover:bg-gray-50 transition-colors">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div>
-                              <div className="text-sm font-medium text-gray-900">#{order.orderNo}</div>
-                              <div className="text-sm text-gray-500">
-                                {new Date(order.createdAt).toLocaleDateString()}
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm font-medium text-gray-900">{order.customer?.name}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">{order.category}</div>
-                            <div className="text-sm text-gray-500">{order.service}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span
-                              className={`px-3 py-1 rounded-full text-xs font-medium ${
-                                STATUS_COLORS[order.status] || "bg-gray-100 text-gray-800"
-                              }`}
-                            >
-                              {order.status}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <RoleProgressBar tasks={order.tasks} />
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <button
-                              onClick={() => setSelectedOrder(order)}
-                              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                                tasksAssigned > 0
-                                  ? "bg-orange-100 text-orange-700 hover:bg-orange-200"
-                                  : "bg-blue-100 text-blue-700 hover:bg-blue-200"
-                              }`}
-                            >
-                              {tasksAssigned > 0 ? "Manage Tasks" : "Assign Tasks"}
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  ) : (
-                    <tr>
-                      <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
-                        No orders found matching your criteria
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+      {!selectedOrder ? (
+        <>
+          <div className="flex gap-4 mb-6">
+            <input
+              type="text"
+              placeholder="Search by order number, customer name, or category..."
+              className="flex-1 p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <select
+              className="p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="">All Status</option>
+              <option value="Placed">Placed</option>
+              <option value="Cutting">Cutting</option>
+              <option value="Handworking">Handworking</option>
+              <option value="Stitching">Stitching</option>
+              <option value="Quality Check">Quality Check</option>
+            </select>
           </div>
-        ) : (
-          // Assignment View
-          <div className="space-y-6">
-            {/* Order Header */}
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                    Order #{selectedOrder.orderNo}
-                  </h2>
-                  <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
-                    <span>Customer: {selectedOrder.customer?.name}</span>
-                    <span>•</span>
-                    <span>Date: {new Date(selectedOrder.createdAt).toLocaleDateString()}</span>
-                    <span>•</span>
-                    <span>Category: {selectedOrder.category}</span>
-                    <span>•</span>
-                    <span>Service: {selectedOrder.service}</span>
+
+          <div className="grid gap-4">
+            {filteredOrders.length > 0 ? filteredOrders.map(orderGroup => (
+              <div key={orderGroup.mainOrder._id} className="border rounded-lg p-4 bg-white shadow-sm">
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <h3 className="font-bold text-lg">Order #{orderGroup.mainOrder.orderNo}</h3>
+                    <p className="text-gray-600">Customer: {orderGroup.mainOrder.customer?.name}</p>
+                    <p className="text-gray-600">Category: {orderGroup.mainOrder.service?.category}</p>
+                    <p className="text-gray-600">Service: {orderGroup.mainOrder.service?.name}</p>
                   </div>
-                </div>
-                <button
-                  onClick={() => setSelectedOrder(null)}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  ← Back to Orders
-                </button>
-              </div>
-            </div>
-
-            {/* Assignment Cards */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {Object.entries(ROLE_MAP).map(([key, label]) => (
-                <RoleAssignmentCard key={key} role={key} label={label} />
-              ))}
-            </div>
-
-            {/* Task Summary */}
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">Task Assignment Summary</h3>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Assigned To</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Deadline</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Assigned By</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {Object.keys(ROLE_MAP).map((role) => {
-                      const task = selectedOrder.tasks?.find((t) => t.stage === role);
-                      return (
-                        <tr key={role}>
-                          <td className="px-6 py-4 whitespace-nowrap">{ROLE_MAP[role]}</td>
-                          <td className="px-6 py-4 whitespace-nowrap">{task?.assignedTo?.name || "-"}</td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            {task?.deadline ? new Date(task.deadline).toLocaleDateString() : "-"}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span
-                              className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                task ? STATUS_COLORS[task.status] || "bg-gray-100 text-gray-800" : "bg-gray-100 text-gray-600"
-                              }`}
-                            >
-                              {task?.status || "Not Assigned"}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">{task?.assignedBy?.name || "-"}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Measurements */}
-            {measurements.length > 0 && (
-              <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-200">
-                  <h3 className="text-lg font-semibold text-gray-900">Customer Measurements</h3>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Value</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {measurements.map((m, index) => (
-                        <tr key={index}>
-                          <td className="px-6 py-4 whitespace-nowrap">{m.measurementName}</td>
-                          <td className="px-6 py-4 whitespace-nowrap">{m.value}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  <button onClick={() => setSelectedOrder(orderGroup)} className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors">Assign Tasks</button>
                 </div>
               </div>
-            )}
+            )) : <div className="text-center py-8 text-gray-500">No orders found matching your criteria</div>}
           </div>
-        )}
-      </div>
+        </>
+      ) : (
+        <>
+          <div className="bg-white border rounded-lg p-4 mb-4 shadow-sm flex justify-between items-start">
+            <div>
+              <h2 className="text-xl font-bold">Order #{selectedOrder.mainOrder.orderNo}</h2>
+              <p className="text-gray-600">Customer: {selectedOrder.mainOrder.customer?.name}</p>
+              <p className="text-gray-600">Category: {selectedOrder.mainOrder.service?.category}</p>
+              <p className="text-gray-600">Service: {selectedOrder.mainOrder.service?.name}</p>
+            </div>
+            <button
+              onClick={() => { setSelectedOrder(null); setSelectedItem(null); setSelectedWorkers({}); }}
+              className="text-gray-600 hover:text-gray-800 px-4 py-2 rounded hover:bg-gray-100 transition-colors"
+            >
+              ← Back
+            </button>
+          </div>
+
+          {selectedOrder.items.length > 0 && (
+            <div className="mb-6 bg-white p-4 rounded-lg shadow-sm">
+              <h3 className="font-bold mb-3">Select Item:</h3>
+              <div className="flex flex-wrap gap-2">
+                <button onClick={() => setSelectedItem(null)} className={`px-4 py-2 rounded ${!selectedItem ? "bg-blue-500 text-white" : "bg-gray-200 hover:bg-gray-300"}`}>Main Order</button>
+                {selectedOrder.items.map(item => (
+                  <button
+                    key={item._id}
+                    onClick={() => setSelectedItem(item)}
+                    className={`px-4 py-2 rounded ${selectedItem?._id === item._id ? "bg-blue-500 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
+                  >
+                    Item #{item.orderNo} ({item.service?.name})
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="grid md:grid-cols-2 gap-6">
+            {assignableStaff[selectedOrder.mainOrder.service._id]?.map(worker => (
+              <RoleAssignmentCard
+                key={worker._id}
+                role={worker.role}
+                itemId={selectedItem?._id}
+                itemName={selectedItem ? `Item ${selectedItem.orderNo}` : null}
+              />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 };

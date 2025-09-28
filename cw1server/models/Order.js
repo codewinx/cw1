@@ -25,6 +25,7 @@ const orderSchema = new mongoose.Schema(
       cloth: { type: Boolean, default: false },
       lining: { type: Boolean, default: false },
     },
+    tasks: [{ type: mongoose.Schema.Types.ObjectId, ref: "Task" }],
     expectedDate: { type: Date, required: true },
     payment: {
       type: mongoose.Schema.Types.ObjectId,
