@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { getOrders } from "../../api/order";
-import { getCustomers } from "../../api/customer";
+import {fetchCustomers } from "../../api/customer";
 import { getAllTasks } from "../../api/task";
 import { getOrderStats } from "../../api/admin";
 import {

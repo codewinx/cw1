@@ -1,3 +1,4 @@
+// route file
 import express from "express";
 import {
   getAllCustomers,
@@ -7,13 +8,9 @@ import {
 
 const router = express.Router();
 
-// GET all customers
+// ✅ This will be /api/customer/
 router.get("/", getAllCustomers);
-
-// UPDATE customer
 router.put("/:id", updateCustomer);
-
-// DELETE customer
 router.delete("/:id", deleteCustomer);
 
 export default router;

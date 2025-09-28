@@ -1,10 +1,9 @@
-// src/api/customer.js
 import api from "./axios";
 
 // ✅ Create a new customer
 export const createCustomer = async (customerData) => {
   try {
-    const response = await api.post("/api/customer/createcustomer", customerData);
+    const response = await api.post("/api/customer", customerData);
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: "Error while adding customer" };
@@ -14,19 +13,29 @@ export const createCustomer = async (customerData) => {
 // ✅ Search customers (by name or ID)
 export const searchCustomers = async (query) => {
   try {
-    const response = await api.get(`/api/customer/searchcustomers?query=${query}`);
+    const response = await api.get(`/api/customer/search?query=${query}`);
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: "Error while searching customers" };
   }
 };
 
-// ✅ Get all customers with order numbers
-export const getCustomers = async (search = "") => {
+// ✅ Get all customers
+export const fetchCustomers = async () => {
   try {
-    const response = await api.get(`/api/customer/customers?search=${search}`);
-    return response.data;
+    const response = await api.get("/api/customer");
+    return response.data; // return directly
   } catch (error) {
     throw error.response?.data || { message: "Error while fetching customers" };
   }
+};
+
+// ✅ Update customer
+export const updateCustomer = async (id, updatedData) => {
+  return await api.put(`/api/customer/${id}`, updatedData);
+};
+
+// ✅ Delete customer
+export const deleteCustomer = async (id) => {
+  return await api.delete(`/api/customer/${id}`);
 };
