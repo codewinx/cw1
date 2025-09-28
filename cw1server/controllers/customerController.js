@@ -1,4 +1,5 @@
 import Customer from "../models/Customer.js";
+import Order from "../models/Order.js";   // ✅ Add this
 
 // ✅ Get all customers
 export const getAllCustomers = async (req, res) => {
@@ -9,6 +10,26 @@ export const getAllCustomers = async (req, res) => {
     res.status(500).json({ message: "Error fetching customers", error });
   }
 };
+// ✅ Get customer by ID with related orders & payments
+export const getCustomerById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const customer = await Customer.findById(id);
+
+    if (!customer) {
+      return res.status(404).json({ message: "Customer not found" });
+    }
+
+    const orders = await Order.find({ customer: id })
+      .populate("service")
+      .populate("payment");
+
+    res.status(200).json({ customer, orders });
+  } catch (error) {
+    res.status(500).json({ message: "Error while fetching customer", error });
+  }
+};
+
 
 // ✅ Update customer
 export const updateCustomer = async (req, res) => {
