@@ -27,7 +27,7 @@ const AdminStaffManagement = () => {
     name: "",
     email: "",
     mobile: "",
-    aadharno: "",
+    aadharNo: "",
     role: "",
     salary: "",
     address: "",
@@ -60,16 +60,16 @@ const AdminStaffManagement = () => {
   // Handle Create / Update
   const handleSave = async () => {
     try {
-      const aadhar = formData.aadharno.replace(/\s/g, "");
+      const aadhar = formData.aadharNo.replace(/\s/g, "");
       if (editingStaff) {
-        const staffData = { ...formData, aadharno: aadhar };
+        const staffData = { ...formData, aadharNo: aadhar };
         if (!staffData.password) {
           delete staffData.password;
         }
         await updateStaff(editingStaff._id, staffData);
         alert("✅ Staff updated successfully");
       } else {
-        await createStaff({ ...formData, aadharno: aadhar });
+        await createStaff({ ...formData, aadharNo: aadhar });
         alert("✅ Staff added successfully");
       }
       setIsModalVisible(false);
@@ -98,7 +98,7 @@ const AdminStaffManagement = () => {
       name: "",
       email: "",
       mobile: "",
-      aadharno: "",
+      aadharNo: "",
       role: "",
       salary: "",
       address: "",
@@ -120,13 +120,15 @@ const AdminStaffManagement = () => {
     const cleanedValue = value.replace(/[\s\D]/g, "");
     // Truncate to 12 digits
     const limitedValue = cleanedValue.slice(0, 12);
-    setFormData({ ...formData, aadharno: limitedValue });
+    setFormData({ ...formData, aadharNo: limitedValue });
   };
 
   const handleEditClick = (staff) => {
     setEditingStaff(staff);
-    // Set aadharno without spaces for the input value
-    setFormData({ ...staff, aadharno: staff.aadharno?.replace(/\s/g, "") || "" });
+    setFormData({
+      ...staff,
+      aadharNo: staff.aadharNo?.replace(/\s/g, "") || "",
+    });
     setIsModalVisible(true);
   };
 
@@ -140,7 +142,7 @@ const AdminStaffManagement = () => {
     (staff) =>
       staff.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       staff.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      staff.aadharno?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      staff.aadharNo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       staff.role.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -226,7 +228,9 @@ const AdminStaffManagement = () => {
                     <div className="text-sm text-gray-600">{staff.email}</div>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="text-sm text-gray-600">{formatAadharNumber(staff.aadharno)}</div>
+                    <div className="text-sm text-gray-600">
+                      {formatAadharNumber(staff.aadharNo)}
+                    </div>
                   </td>
                   <td className="px-6 py-4">
                     <span
@@ -311,93 +315,125 @@ const AdminStaffManagement = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">Full Name</label>
+                <label className="block text-sm font-semibold text-gray-700">
+                  Full Name
+                </label>
                 <input
                   type="text"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
                   className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 focus:border-pink-300 transition-all"
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">Email Address</label>
+                <label className="block text-sm font-semibold text-gray-700">
+                  Email Address
+                </label>
                 <input
                   type="email"
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
                   className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 focus:border-pink-300 transition-all"
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">Mobile Number</label>
+                <label className="block text-sm font-semibold text-gray-700">
+                  Mobile Number
+                </label>
                 <input
                   type="text"
                   value={formData.mobile}
-                  onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, mobile: e.target.value })
+                  }
                   className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 focus:border-pink-300 transition-all"
                 />
               </div>
 
-              {/* Aadhar Number Input Field with fixed formatting */}
+              {/* Aadhar Number Input Field */}
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">Aadhar Number</label>
+                <label className="block text-sm font-semibold text-gray-700">
+                  Aadhar Number
+                </label>
                 <input
                   type="text"
-                  value={formatAadharNumber(formData.aadharno)}
+                  value={formatAadharNumber(formData.aadharNo)}
                   onChange={handleAadharChange}
-                  maxLength="14" // 12 digits + 2 spaces
+                  maxLength="14"
                   placeholder="e.g., 1234 5678 9012"
                   className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 focus:border-pink-300 transition-all"
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">Salary</label>
+                <label className="block text-sm font-semibold text-gray-700">
+                  Salary
+                </label>
                 <input
                   type="number"
                   value={formData.salary}
-                  onChange={(e) => setFormData({ ...formData, salary: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, salary: e.target.value })
+                  }
                   className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 focus:border-pink-300 transition-all"
                 />
               </div>
-              
+
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">Address</label>
+                <label className="block text-sm font-semibold text-gray-700">
+                  Address
+                </label>
                 <input
                   type="text"
                   value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, address: e.target.value })
+                  }
                   className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 focus:border-pink-300 transition-all"
                 />
               </div>
-              
+
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">Star Rating (0-5)</label>
+                <label className="block text-sm font-semibold text-gray-700">
+                  Star Rating (0-5)
+                </label>
                 <input
                   type="number"
                   value={formData.starRating}
-                  onChange={(e) => setFormData({ ...formData, starRating: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, starRating: e.target.value })
+                  }
                   min="0"
                   max="5"
                   className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 focus:border-pink-300 transition-all"
                 />
               </div>
-              
+
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">Experience (years)</label>
+                <label className="block text-sm font-semibold text-gray-700">
+                  Experience (years)
+                </label>
                 <input
                   type="number"
                   value={formData.experience}
-                  onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, experience: e.target.value })
+                  }
                   className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 focus:border-pink-300 transition-all"
                 />
               </div>
 
               {/* Profile Image Upload */}
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">Profile Image</label>
+                <label className="block text-sm font-semibold text-gray-700">
+                  Profile Image
+                </label>
                 <input
                   type="file"
                   accept="image/*"
@@ -427,10 +463,14 @@ const AdminStaffManagement = () => {
 
               {/* Role */}
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">Role</label>
+                <label className="block text-sm font-semibold text-gray-700">
+                  Role
+                </label>
                 <select
                   value={formData.role}
-                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, role: e.target.value })
+                  }
                   className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 focus:border-pink-300 transition-all"
                 >
                   <option value="">Select Role</option>
@@ -443,10 +483,14 @@ const AdminStaffManagement = () => {
 
               {/* Gender */}
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">Gender</label>
+                <label className="block text-sm font-semibold text-gray-700">
+                  Gender
+                </label>
                 <select
                   value={formData.gender}
-                  onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, gender: e.target.value })
+                  }
                   className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 focus:border-pink-300 transition-all"
                 >
                   <option value="">Select Gender</option>
@@ -458,11 +502,15 @@ const AdminStaffManagement = () => {
 
               {/* Username */}
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">Username</label>
+                <label className="block text-sm font-semibold text-gray-700">
+                  Username
+                </label>
                 <input
                   type="text"
                   value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, username: e.target.value })
+                  }
                   className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 focus:border-pink-300 transition-all"
                 />
               </div>
@@ -470,48 +518,32 @@ const AdminStaffManagement = () => {
               {/* Password */}
               <div className="space-y-2">
                 <label className="block text-sm font-semibold text-gray-700">
-                  {editingStaff
-                    ? "New Password (leave blank to keep old)"
-                    : "Password"}
+                  Password {editingStaff && "(Leave blank to keep current)"}
                 </label>
                 <input
                   type="password"
                   value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, password: e.target.value })
+                  }
                   className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-300 focus:border-pink-300 transition-all"
                 />
               </div>
             </div>
 
-            {/* Certified Checkbox */}
-            <div className="mt-6">
-              <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  checked={formData.certified}
-                  onChange={(e) => setFormData({ ...formData, certified: e.target.checked })}
-                  className="w-4 h-4 text-pink-500 bg-gray-100 border-gray-300 rounded focus:ring-pink-300 focus:ring-2"
-                />
-                <label className="text-sm font-semibold text-gray-700">
-                  Certified Professional
-                </label>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex justify-end gap-4 mt-8">
+            <div className="mt-8 flex justify-end gap-4">
               <button
                 onClick={() => {
                   setIsModalVisible(false);
                   resetForm();
                 }}
-                className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSave}
-                className="px-6 py-3 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-lg hover:from-pink-600 hover:to-purple-600 transition-all duration-200 transform hover:scale-105 font-medium shadow-lg"
+                className="px-6 py-3 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-lg shadow-lg hover:from-pink-600 hover:to-purple-600 transition-all duration-200 transform hover:scale-105"
               >
                 {editingStaff ? "Update Staff" : "Add Staff"}
               </button>
@@ -540,96 +572,85 @@ const AdminStaffManagement = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">Full Name</label>
-                <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">
-                  {viewingStaff.name || "N/A"}
-                </div>
+                <p className="text-sm text-gray-500">Full Name</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {viewingStaff.name}
+                </p>
               </div>
 
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">Email</label>
-                <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">
-                  {viewingStaff.email || "N/A"}
-                </div>
+                <p className="text-sm text-gray-500">Email Address</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {viewingStaff.email}
+                </p>
               </div>
 
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">Mobile</label>
-                <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">
-                  {viewingStaff.mobile || "N/A"}
-                </div>
+                <p className="text-sm text-gray-500">Mobile Number</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {viewingStaff.mobile}
+                </p>
               </div>
 
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">Aadhar Number</label>
-                <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">
-                  {formatAadharNumber(viewingStaff.aadharno) || "N/A"}
-                </div>
+                <p className="text-sm text-gray-500">Aadhar Number</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {formatAadharNumber(viewingStaff.aadharNo) || "N/A"}
+                </p>
               </div>
 
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">Role</label>
-                <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">
-                  {viewingStaff.role || "N/A"}
-                </div>
+                <p className="text-sm text-gray-500">Role</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {viewingStaff.role}
+                </p>
               </div>
 
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">Salary</label>
-                <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">
-                  {viewingStaff.salary || "N/A"}
-                </div>
+                <p className="text-sm text-gray-500">Salary</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {viewingStaff.salary}
+                </p>
               </div>
 
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">Address</label>
-                <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">
+                <p className="text-sm text-gray-500">Address</p>
+                <p className="text-lg font-semibold text-gray-900">
                   {viewingStaff.address || "N/A"}
-                </div>
+                </p>
               </div>
 
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">Gender</label>
-                <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">
-                  {viewingStaff.gender || "N/A"}
-                </div>
+                <p className="text-sm text-gray-500">Gender</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {viewingStaff.gender}
+                </p>
               </div>
 
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">Experience</label>
-                <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">
-                  {viewingStaff.experience || 0} years
-                </div>
+                <p className="text-sm text-gray-500">Experience</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {viewingStaff.experience} years
+                </p>
               </div>
 
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">Star Rating</label>
-                <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">
-                  ⭐ {viewingStaff.starRating || 0}/5
-                </div>
+                <p className="text-sm text-gray-500">Certified</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {viewingStaff.certified ? "Yes" : "No"}
+                </p>
               </div>
 
-              <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">Certified</label>
-                <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-900">
-                  {viewingStaff.certified ? "✅ Yes" : "❌ No"}
-                </div>
-              </div>
-
-              <div className="space-y-2 col-span-2">
-                <label className="block text-sm font-semibold text-gray-700">Profile Image</label>
-                {viewingStaff.profileImage ? (
+              {viewingStaff.profileImage && (
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-500">Profile Image</p>
                   <img
                     src={viewingStaff.profileImage}
                     alt="Profile"
-                    className="w-20 h-20 rounded-full object-cover"
+                    className="w-32 h-32 rounded-full object-cover border"
                   />
-                ) : (
-                  <div className="px-4 py-3 bg-gray-50 rounded-lg text-gray-500">
-                    No image
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

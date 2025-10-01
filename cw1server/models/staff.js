@@ -44,6 +44,14 @@ const staffSchema = new mongoose.Schema({
     default: 0,
   },
 
+  // Aadhaar number
+  aadharNo: {
+    type: String,
+    unique: true,
+    sparse: true,
+    match: /^[0-9]{12}$/, // ensures 12 digit numeric string
+  },
+
   // Performance & Task Tracking
   performance: {
     totalTasks: { type: Number, default: 0 },
