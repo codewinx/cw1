@@ -53,20 +53,17 @@ export const getOrdersWithItems = async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
 
-    // If no grouping needed (single order per payment), just return like getOrders
-    if (!orders.length) {
-      return res.json([]);
-    }
+    if (!orders.length) return res.json([]);
 
-    // Group orders by payment._id
+    // Group by payment._id
     const paymentGroups = {};
-    orders.forEach((order) => {
+    orders.forEach(order => {
       const paymentId = order.payment?._id?.toString();
       if (!paymentId) return;
 
       if (!paymentGroups[paymentId]) {
         paymentGroups[paymentId] = {
-          mainOrder: order,   // ✅ always store the actual order here
+          mainOrder: order,
           items: [],
         };
       } else {
@@ -74,13 +71,21 @@ export const getOrdersWithItems = async (req, res) => {
       }
     });
 
-    const ordersWithItems = Object.values(paymentGroups);
+    // Ensure tasks array exists for mainOrder and items
+    Object.values(paymentGroups).forEach(group => {
+      group.mainOrder.tasks = group.mainOrder.tasks || [];
+      group.items = group.items.map(item => ({
+        ...item,
+        tasks: item.tasks || [],
+      }));
+    });
 
     res.status(200).json({
       success: true,
-      data: ordersWithItems,
+      data: Object.values(paymentGroups),
     });
   } catch (err) {
+    console.error("Error fetching orders with items:", err);
     res.status(500).json({
       success: false,
       message: "Error fetching orders with items",
@@ -88,6 +93,7 @@ export const getOrdersWithItems = async (req, res) => {
     });
   }
 };
+
 
 
 // 🔹 Assign task to staff member
@@ -107,8 +113,10 @@ export const assignTask = async (req, res) => {
     const staff = await Staff.findById(staffId);
     if (!staff || !staff.isActive) return res.status(400).json({ message: "Staff not found or inactive" });
 
-    // Check existing task for this stage
-    let existingTask = order.tasks.find((t) => t.stage === stage);
+    // Check existing task for this stage and item
+let existingTask = order.tasks.find((t) => 
+    t.stage === stage && ((t.itemId && itemId && t.itemId.toString() === itemId) || (!t.itemId && !itemId))
+);
 
     if (existingTask) {
       // ✅ Mark old task as reassigned

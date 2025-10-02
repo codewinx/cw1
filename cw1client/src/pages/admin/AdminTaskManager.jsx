@@ -19,7 +19,14 @@ const AdminTaskManager = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [showMeasurementsFor, setShowMeasurementsFor] = useState(null);
 
+  const showMessage = (type, text) => {
+    setMessage({ type, text });
+    setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+  };
+
+  // Fetch orders
   useEffect(() => {
     const fetchOrders = async () => {
       try {
@@ -36,11 +43,7 @@ const AdminTaskManager = () => {
     fetchOrders();
   }, []);
 
-  const showMessage = (type, text) => {
-    setMessage({ type, text });
-    setTimeout(() => setMessage({ type: '', text: '' }), 3000);
-  };
-
+  // Fetch assignable staff for selected order
   useEffect(() => {
     const fetchStaff = async () => {
       const serviceId = selectedOrder?.mainOrder?.service?._id;
@@ -58,16 +61,21 @@ const AdminTaskManager = () => {
     fetchStaff();
   }, [selectedOrder]);
 
+  const getItemIndex = (orderGroup, item) => {
+    if (!orderGroup) return 1;
+    if (!item) return 1; 
+    const idx = orderGroup.items.findIndex(i => i._id === item._id);
+    return idx >= 0 ? idx + 2 : 1;
+  };
+
   const filteredOrders = ordersWithItems.filter(orderGroup => {
     const order = orderGroup.mainOrder;
     const searchLower = searchTerm.toLowerCase();
     const matchesSearch =
       !searchTerm ||
-      (order.orderNo && String(order.orderNo).toLowerCase().includes(searchLower)) ||
       (order.customer?.name && order.customer.name.toLowerCase().includes(searchLower)) ||
       (order.service?.category && order.service.category.toLowerCase().includes(searchLower)) ||
       (order.service?.name && order.service.name.toLowerCase().includes(searchLower));
-
     const matchesStatus = !statusFilter || order.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -91,7 +99,7 @@ const AdminTaskManager = () => {
         stage: role,
         staffId: workerData.staffId,
         deadline: workerData.deadline || null,
-        remarks: `Assigned for ${itemId ? 'item' : 'main order'}`,
+        remarks: `Assigned for ${itemId ? 'Item' : 'Main Order'}`,
         itemId: itemId || null
       };
 
@@ -99,8 +107,16 @@ const AdminTaskManager = () => {
 
       if (result.success) {
         showMessage("success", "Task assigned successfully!");
+
+        // Refresh orders
         const ordersData = await getOrdersWithItems();
         setOrdersWithItems(ordersData.data || ordersData);
+
+        const updatedOrder = (ordersData.data || ordersData).find(
+          o => o.mainOrder._id === selectedOrder.mainOrder._id
+        );
+        setSelectedOrder(updatedOrder);
+
         setSelectedWorkers(prev => ({ ...prev, [role]: {} }));
       } else {
         showMessage("error", result.message || "Failed to assign task");
@@ -111,14 +127,12 @@ const AdminTaskManager = () => {
     }
   };
 
-  const RoleAssignmentCard = ({ role, itemId = null, itemName = null }) => {
-    const currentOrder = itemId ? selectedItem : selectedOrder?.mainOrder;
-    const currentTask = currentOrder?.tasks?.find(
-      t => t.stage === role && (t.itemId || null) === (itemId || null)
+  const RoleAssignmentCard = ({ role, itemId = null, itemName = null, availableStaff = [] }) => {
+    const allTasks = selectedItem?.tasks || selectedOrder.mainOrder.tasks || [];
+    const currentTask = allTasks.find(
+      t => t.stage === role && String(t.itemId || "") === String(itemId || "")
     );
     const taskStatus = currentTask?.status || "Not Assigned";
-    const serviceId = selectedOrder?.mainOrder?.service?._id;
-    const availableStaff = assignableStaff[serviceId] || [];
 
     return (
       <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4 shadow-sm">
@@ -197,7 +211,7 @@ const AdminTaskManager = () => {
           <div className="flex gap-4 mb-6">
             <input
               type="text"
-              placeholder="Search by order number, customer name, or category..."
+              placeholder="Search by customer name, or category..."
               className="flex-1 p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -217,11 +231,11 @@ const AdminTaskManager = () => {
           </div>
 
           <div className="grid gap-4">
-            {filteredOrders.length > 0 ? filteredOrders.map(orderGroup => (
+            {filteredOrders.length > 0 ? filteredOrders.map((orderGroup, idx) => (
               <div key={orderGroup.mainOrder._id} className="border rounded-lg p-4 bg-white shadow-sm">
                 <div className="flex justify-between items-start mb-3">
                   <div>
-                    <h3 className="font-bold text-lg">Order #{orderGroup.mainOrder.orderNo}</h3>
+                    <h3 className="font-bold text-lg">#ORD {idx + 1}</h3>
                     <p className="text-gray-600">Customer: {orderGroup.mainOrder.customer?.name}</p>
                     <p className="text-gray-600">Category: {orderGroup.mainOrder.service?.category}</p>
                     <p className="text-gray-600">Service: {orderGroup.mainOrder.service?.name}</p>
@@ -236,46 +250,92 @@ const AdminTaskManager = () => {
         <>
           <div className="bg-white border rounded-lg p-4 mb-4 shadow-sm flex justify-between items-start">
             <div>
-              <h2 className="text-xl font-bold">Order #{selectedOrder.mainOrder.orderNo}</h2>
+              <h2 className="text-xl font-bold">
+                {selectedItem ? `Item ${getItemIndex(selectedOrder, selectedItem)} / ${selectedOrder.items.length + 1}` : "Main Order"}
+              </h2>
               <p className="text-gray-600">Customer: {selectedOrder.mainOrder.customer?.name}</p>
               <p className="text-gray-600">Category: {selectedOrder.mainOrder.service?.category}</p>
               <p className="text-gray-600">Service: {selectedOrder.mainOrder.service?.name}</p>
             </div>
             <button
-              onClick={() => { setSelectedOrder(null); setSelectedItem(null); setSelectedWorkers({}); }}
+              onClick={() => { setSelectedOrder(null); setSelectedItem(null); setSelectedWorkers({}); setShowMeasurementsFor(null); }}
               className="text-gray-600 hover:text-gray-800 px-4 py-2 rounded hover:bg-gray-100 transition-colors"
             >
               ← Back
             </button>
           </div>
 
-          {selectedOrder.items.length > 0 && (
-            <div className="mb-6 bg-white p-4 rounded-lg shadow-sm">
-              <h3 className="font-bold mb-3">Select Item:</h3>
-              <div className="flex flex-wrap gap-2">
-                <button onClick={() => setSelectedItem(null)} className={`px-4 py-2 rounded ${!selectedItem ? "bg-blue-500 text-white" : "bg-gray-200 hover:bg-gray-300"}`}>Main Order</button>
-                {selectedOrder.items.map(item => (
+          {/* Item Selection */}
+          <div className="mb-6 bg-white p-4 rounded-lg shadow-sm">
+            <h3 className="font-bold mb-3">Select Item:</h3>
+            <div className="flex flex-wrap gap-2 items-center">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setSelectedItem(null)}
+                  className={`px-4 py-2 rounded ${!selectedItem ? "bg-blue-500 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
+                >
+                  Main Order
+                </button>
+                <button
+                  onClick={() => setShowMeasurementsFor(showMeasurementsFor === null ? "main" : null)}
+                  className="p-2 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
+                  title="View Measurements"
+                >
+                  👁
+                </button>
+              </div>
+
+              {selectedOrder.items.map(item => (
+                <div key={item._id} className="flex items-center gap-2">
                   <button
-                    key={item._id}
                     onClick={() => setSelectedItem(item)}
                     className={`px-4 py-2 rounded ${selectedItem?._id === item._id ? "bg-blue-500 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
                   >
-                    Item #{item.orderNo} ({item.service?.name})
+                    Item {getItemIndex(selectedOrder, item)} / {selectedOrder.items.length + 1} ({item.service?.name})
                   </button>
-                ))}
-              </div>
+                  <button
+                    onClick={() => setShowMeasurementsFor(showMeasurementsFor === item._id ? null : item._id)}
+                    className="p-2 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
+                    title="View Measurements"
+                  >
+                    👁
+                  </button>
+                </div>
+              ))}
             </div>
-          )}
 
+            {showMeasurementsFor !== null && (
+              <div className="mt-4 p-3 bg-gray-50 border rounded shadow-sm">
+                <h4 className="font-semibold mb-2">Measurements:</h4>
+                {showMeasurementsFor === "main" ? (
+                  selectedOrder.mainOrder.measurements.map((m, idx) => (
+                    <p key={idx} className="text-gray-700 text-sm">{m.fieldName}: {m.value}</p>
+                  ))
+                ) : (
+                  selectedOrder.items.find(i => i._id === showMeasurementsFor)?.measurements.map((m, idx) => (
+                    <p key={idx} className="text-gray-700 text-sm">{m.fieldName}: {m.value}</p>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Role Assignment Cards */}
           <div className="grid md:grid-cols-2 gap-6">
-            {assignableStaff[selectedOrder.mainOrder.service._id]?.map(worker => (
-              <RoleAssignmentCard
-                key={worker._id}
-                role={worker.role}
-                itemId={selectedItem?._id}
-                itemName={selectedItem ? `Item ${selectedItem.orderNo}` : null}
-              />
-            ))}
+            {["Admin", "Cutter", "Handworker", "Manager"].map(role => {
+              const staffForRole = (assignableStaff[selectedOrder.mainOrder.service._id] || []).filter(s => s.role === role);
+              if (staffForRole.length === 0) return null;
+
+              return (
+                <RoleAssignmentCard
+                  key={role}
+                  role={role}
+                  itemId={selectedItem?._id}
+                  itemName={selectedItem ? `Item ${getItemIndex(selectedOrder, selectedItem)}` : null}
+                  availableStaff={staffForRole}
+                />
+              );
+            })}
           </div>
         </>
       )}
