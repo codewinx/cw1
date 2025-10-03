@@ -61,4 +61,6 @@ router.delete("/staff/:id", protect, authorize("admin"), deleteStaff);
 // GET /api/orders/stats
 router.get("/stats", protect, authorize("admin"), getOrderStats);
 
+
+
 module.exports = router;
