@@ -11,14 +11,32 @@ export const createCustomer = async (customerData) => {
   }
 };
 
+// export const getOrderStats = async () => {
+//   const token = localStorage.getItem("token");
+
+//   const res = await api.get("/api/auth/stats", {
+//     headers: {
+//       Authorization: `Bearer ${token}`,
+//     },
+//   });
+
+//   return res.data; // will contain { success: true, data: {...} }
+// };
+
+
+// 📊 Get Order Stats
 export const getOrderStats = async () => {
-  const token = localStorage.getItem("token");
+  try {
+    const token = localStorage.getItem("token");
 
-  const res = await api.get("/api/auth/stats", {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+    const res = await api.get("/api/auth/stats", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
-  return res.data; // will contain { success: true, data: {...} }
+    return res.data; // { success: true, data: {...} }
+  } catch (err) {
+    throw err.response?.data || { message: "Error fetching order stats" };
+  }
 };

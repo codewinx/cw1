@@ -395,3 +395,71 @@ const AdminDashboard = () => {
 
 export default AdminDashboard;
 
+
+
+
+
+
+
+// import React, { useEffect, useState } from "react";
+// import { getOrderStats } from "../../api/admin"; // ✅ import API
+
+// const AdminDashboard = () => {
+//   const [workflow, setWorkflow] = useState({
+//     placed: 0,
+//     cutting: 0,
+//     handworking: 0,
+//     tailoring: 0,
+//     qualityCheck: 0,
+//     readyToDeliver: 0,
+//   });
+
+//   useEffect(() => {
+//     const fetchStats = async () => {
+//       try {
+//         const res = await getOrderStats();
+//         const stats = res.data;
+
+//         setWorkflow({
+//           placed: stats.placed || 0,
+//           cutting: stats.cutting || 0,
+//           handworking: stats.handworking || 0,
+//           tailoring: stats.tailoring || 0,
+//           qualityCheck: stats["quality-check"] || 0,
+//           readyToDeliver: stats["ready-to-deliver"] || 0,
+//         });
+//       } catch (err) {
+//         console.error("Error fetching stats", err);
+//       }
+//     };
+
+//     fetchStats();
+//   }, []);
+
+//   return (
+//     <div className="min-h-screen bg-gray-100 p-8">
+//       <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
+
+//       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+//         <StatCard title="Placed Orders" value={workflow.placed} color="bg-blue-500" />
+//         <StatCard title="Cutting Orders" value={workflow.cutting} color="bg-purple-500" />
+//         <StatCard title="Handworking Orders" value={workflow.handworking} color="bg-pink-500" />
+//         <StatCard title="Tailoring Orders" value={workflow.tailoring} color="bg-indigo-500" />
+//         <StatCard title="Quality Check Orders" value={workflow.qualityCheck} color="bg-yellow-500" />
+//         <StatCard title="Ready to Deliver" value={workflow.readyToDeliver} color="bg-green-500" />
+//       </div>
+//     </div>
+//   );
+// };
+
+// // ✅ Small reusable card component
+// const StatCard = ({ title, value, color }) => (
+//   <div className="p-6 rounded-xl shadow-lg bg-white flex flex-col items-center">
+//     <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg ${color}`}>
+//       {value}
+//     </div>
+//     <p className="mt-3 text-gray-700 font-semibold">{title}</p>
+//   </div>
+// );
+
+// export default AdminDashboard;
