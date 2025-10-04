@@ -275,17 +275,94 @@ const handleSubmit = async (e) => {
                 </div>
               ))}
               <div className="grid grid-cols-3 gap-4 mt-2">
-                <div>
-                  <label className="block font-medium">Color</label>
-                  <input type="color" value={item.color} onChange={(e) => handleColorChange(idx, e.target.value)} className="w-full h-10 rounded" />
-                </div>
-                <div>
-                  <label className="block font-medium">Design</label>
-                  <input type="file" accept="image/*" onChange={(e) => handleDesignChange(idx, e.target.files[0])} className="input w-full" />
-                  {previewImages[idx] && (
-                    <button type="button" className="text-blue-600 hover:underline mt-1 text-sm" onClick={() => setShowPreview(idx)}>👁 Preview</button>
-                  )}
-                </div>
+         <div>
+  <label className="block font-medium">Color</label>
+  <select
+    value={item.color || ""}
+    onChange={(e) => {
+      const items = [...formData.items];
+      items[idx].color = e.target.value;
+      setFormData((prev) => ({ ...prev, items }));
+    }}
+    className="input w-full mb-2"
+  >
+    <option value="">Select a Color</option>
+    <option value="AliceBlue">AliceBlue</option>
+    <option value="Aqua">Aqua</option>
+    <option value="Aquamarine">Aquamarine</option>
+    <option value="Beige">Beige</option>
+    <option value="Black">Black</option>
+    <option value="Blue">Blue</option>
+    <option value="BlueViolet">BlueViolet</option>
+    <option value="Brown">Brown</option>
+    <option value="CadetBlue">CadetBlue</option>
+    <option value="Chartreuse">Chartreuse</option>
+    <option value="Chocolate">Chocolate</option>
+    <option value="Coral">Coral</option>
+    <option value="CornflowerBlue">CornflowerBlue</option>
+    <option value="Crimson">Crimson</option>
+    <option value="Cyan">Cyan</option>
+    <option value="DarkBlue">DarkBlue</option>
+    <option value="DarkCyan">DarkCyan</option>
+    <option value="DarkGoldenRod">DarkGoldenRod</option>
+    <option value="DarkGray">DarkGray</option>
+    <option value="DarkGreen">DarkGreen</option>
+    <option value="DarkKhaki">DarkKhaki</option>
+    <option value="DarkMagenta">DarkMagenta</option>
+    <option value="DarkOliveGreen">DarkOliveGreen</option>
+    <option value="DarkOrange">DarkOrange</option>
+    <option value="DarkOrchid">DarkOrchid</option>
+    <option value="DarkRed">DarkRed</option>
+    <option value="DarkSalmon">DarkSalmon</option>
+    <option value="DarkSeaGreen">DarkSeaGreen</option>
+    <option value="DarkSlateBlue">DarkSlateBlue</option>
+    <option value="DarkSlateGray">DarkSlateGray</option>
+    <option value="DarkTurquoise">DarkTurquoise</option>
+    <option value="DarkViolet">DarkViolet</option>
+    <option value="DeepPink">DeepPink</option>
+    <option value="DeepSkyBlue">DeepSkyBlue</option>
+    <option value="DimGray">DimGray</option>
+    <option value="DodgerBlue">DodgerBlue</option>
+    <option value="FireBrick">FireBrick</option>
+    <option value="FloralWhite">FloralWhite</option>
+    <option value="ForestGreen">ForestGreen</option>
+    <option value="Fuchsia">Fuchsia</option>
+    <option value="Gainsboro">Gainsboro</option>
+    <option value="Gold">Gold</option>
+    <option value="GoldenRod">GoldenRod</option>
+    <option value="Gray">Gray</option>
+    <option value="Green">Green</option>
+    <option value="GreenYellow">GreenYellow</option>
+    <option value="HoneyDew">HoneyDew</option>
+    <option value="HotPink">HotPink</option>
+    <option value="IndianRed">IndianRed</option>
+    <option value="Indigo">Indigo</option>
+    <option value="Ivory">Ivory</option>
+  </select>
+</div>
+
+
+
+               <div>
+  <label className="block font-medium">Design</label>
+  <input
+    type="file"
+    accept="image/*"
+    capture="environment"   // 👈 allows direct camera capture on mobile
+    onChange={(e) => handleDesignChange(idx, e.target.files[0])}
+    className="input w-full"
+  />
+  {previewImages[idx] && (
+    <button
+      type="button"
+      className="text-blue-600 hover:underline mt-1 text-sm"
+      onClick={() => setShowPreview(idx)}
+    >
+      👁 Preview
+    </button>
+  )}
+</div>
+
                 <div>
                   <label className="block font-medium">Raw Material</label>
                   <label className="mr-2"><input type="checkbox" checked={item.rawMaterial.cloth} onChange={(e) => handleRawMaterialChange(idx, "cloth", e.target.checked)} /> Cloth</label>

@@ -4,7 +4,13 @@ const orderSchema = new mongoose.Schema(
   {
     orderNo: {
       type: String,
-      unique: true, // ✅ no required, hook will always generate it
+      required: true,
+      unique: true, // globally unique across all orders (main + sub)
+    },
+    parentOrder: {
+      type: mongoose.Schema.Types.ObjectId, // null → main order, set → suborder
+      ref: "Order",
+      default: null,
     },
     customer: {
       type: mongoose.Schema.Types.ObjectId,
@@ -17,9 +23,12 @@ const orderSchema = new mongoose.Schema(
       required: true,
     },
     measurements: [
-      { fieldName: { type: String }, value: { type: String } },
+      {
+        fieldName: { type: String },
+        value: { type: String },
+      },
     ],
-    designImage: { type: String }, // store path to uploaded image
+    designImage: { type: String },
     color: { type: String },
     rawMaterial: {
       cloth: { type: Boolean, default: false },
@@ -49,22 +58,7 @@ const orderSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// 🔑 Auto-generate orderNo
-orderSchema.pre("save", async function (next) {
-  if (!this.orderNo) {
-    const lastOrder = await this.constructor.findOne().sort({ createdAt: -1 });
-
-    let nextNumber = 1;
-    if (lastOrder?.orderNo) {
-      const lastNumber = parseInt(lastOrder.orderNo.split("-")[1], 10);
-      if (!isNaN(lastNumber)) {
-        nextNumber = lastNumber + 1;
-      }
-    }
-
-    this.orderNo = `ORD-${String(nextNumber).padStart(3, "0")}`;
-  }
-  next();
-});
+// ❌ REMOVE the pre("save") hook
+// Controller now fully manages main/sub order numbers.
 
 module.exports = mongoose.model("Order", orderSchema);
