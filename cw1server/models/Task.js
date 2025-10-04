@@ -6,7 +6,7 @@ const taskSchema = new mongoose.Schema(
     order: { type: mongoose.Schema.Types.ObjectId, ref: "Order", required: true },
     stage: {
       type: String,
-      enum: ["Cutter", "Tailor", "Handworker"],
+      enum: ["Cutter", "Tailor", "Handworker", "Manager", "admin"],
       required: true,
     },
     assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: "Staff", required: true },
@@ -36,9 +36,11 @@ const taskSchema = new mongoose.Schema(
 );
 // ✅ Map Task.stage → Order.status
 const stageToOrderStatus = {
-  Cutter: "cutting",
-  Handworker: "handworking",
-  Tailor: "tailoring",
+  Cutter: "Cutting",
+  Handworker: "Handworking",
+  Tailor: "Stitching",
+  Manager: "Quality Check",
+  admin: "Quality Check",
 };
 
 // 🔄 Sync Order status automatically when task changes

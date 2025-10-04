@@ -2,7 +2,6 @@
 import Staff from "../models/Staff.js";
 import Task from "../models/Task.js";
 import Order from "../models/Order.js";
-import mongoose from "mongoose"; 
 import Service from "../models/Service.js"; // Import the service
 // Map category to assignable roles
 const categoryRoleMap = {
@@ -39,62 +38,25 @@ export const getAssignableStaff = async (req, res) => {
 // 🔹 Get all orders with their items and tasks (grouped by payment)
 export const getOrdersWithItems = async (req, res) => {
   try {
-    const orders = await Order.find()
-      .populate("customer", "name mobile")
-      .populate("service", "name category")
-      .populate("payment", "amount status")
-      .populate({
-        path: "tasks",
-        populate: [
-          { path: "assignedTo", select: "name role" },
-          { path: "assignedBy", select: "name role" },
-        ],
-      })
-      .sort({ createdAt: -1 })
+    const mainOrders = await Order.find({ parentOrder: null })
+      .populate("customer service tasks")
       .lean();
 
-    if (!orders.length) return res.json([]);
+    const groupedOrders = await Promise.all(
+      mainOrders.map(async (mainOrder) => {
+        const items = await Order.find({ parentOrder: mainOrder._id })
+          .populate("customer service tasks")
+          .lean();
 
-    // Group by payment._id
-    const paymentGroups = {};
-    orders.forEach(order => {
-      const paymentId = order.payment?._id?.toString();
-      if (!paymentId) return;
+        return { mainOrder, items };
+      })
+    );
 
-      if (!paymentGroups[paymentId]) {
-        paymentGroups[paymentId] = {
-          mainOrder: order,
-          items: [],
-        };
-      } else {
-        paymentGroups[paymentId].items.push(order);
-      }
-    });
-
-    // Ensure tasks array exists for mainOrder and items
-    Object.values(paymentGroups).forEach(group => {
-      group.mainOrder.tasks = group.mainOrder.tasks || [];
-      group.items = group.items.map(item => ({
-        ...item,
-        tasks: item.tasks || [],
-      }));
-    });
-
-    res.status(200).json({
-      success: true,
-      data: Object.values(paymentGroups),
-    });
+    res.json(groupedOrders);
   } catch (err) {
-    console.error("Error fetching orders with items:", err);
-    res.status(500).json({
-      success: false,
-      message: "Error fetching orders with items",
-      error: err.message,
-    });
+    res.status(500).json({ message: "Error fetching orders", error: err.message });
   }
 };
-
-
 
 // 🔹 Assign task to staff member
 export const assignTask = async (req, res) => {
@@ -105,24 +67,33 @@ export const assignTask = async (req, res) => {
       return res.status(400).json({ message: "Please select a worker before assigning." });
     }
 
-    // Find order and populate tasks
+    // Fetch order
     const order = await Order.findById(orderId).populate("tasks");
     if (!order) return res.status(404).json({ message: "Order not found" });
 
-    // Check if staff exists
+    // Validate staff
     const staff = await Staff.findById(staffId);
-    if (!staff || !staff.isActive) return res.status(400).json({ message: "Staff not found or inactive" });
+    if (!staff || !staff.isActive) {
+      return res.status(400).json({ message: "Staff not found or inactive" });
+    }
 
-    // Check existing task for this stage and item
-let existingTask = order.tasks.find((t) => 
-    t.stage === stage && ((t.itemId && itemId && t.itemId.toString() === itemId) || (!t.itemId && !itemId))
-);
+    // Check existing task
+    let existingTask = order.tasks.find((t) =>
+      t.stage === stage &&
+      ((t.itemId && itemId && t.itemId.toString() === itemId) || (!t.itemId && !itemId))
+    );
+
+    // 🔹 Common update function for Order status
+    const updateOrderStatus = async (targetOrderId, newStatus) => {
+      if (!targetOrderId) return;
+      await Order.findByIdAndUpdate(targetOrderId, { status: newStatus });
+    };
 
     if (existingTask) {
-      // ✅ Mark old task as reassigned
+      // ✅ Reassign
       const oldTask = await Task.findById(existingTask._id);
       oldTask.status = "reassigned";
-      oldTask.wasReassigned = true; // add this field to schema
+      oldTask.wasReassigned = true;
       oldTask.history.push({
         action: "reassigned",
         by: req.user._id,
@@ -131,7 +102,7 @@ let existingTask = order.tasks.find((t) =>
       });
       await oldTask.save();
 
-      // ✅ Create new task for reassignment
+      // ✅ Create new task
       const newTask = await Task.create({
         order: orderId,
         stage,
@@ -141,6 +112,7 @@ let existingTask = order.tasks.find((t) =>
         remarks,
         itemId: itemId || null,
         isReassigned: true,
+        status: "pending",
         history: [
           { action: "assigned (reassign)", by: req.user._id, to: staffId, note: remarks || "Reassigned task" },
         ],
@@ -148,6 +120,9 @@ let existingTask = order.tasks.find((t) =>
 
       order.tasks.push(newTask._id);
       await order.save();
+
+      // ✅ Update the related Order or Suborder status
+      await updateOrderStatus(itemId || orderId, stage);
 
       return res.json({
         success: true,
@@ -164,6 +139,7 @@ let existingTask = order.tasks.find((t) =>
         deadline,
         remarks,
         itemId: itemId || null,
+        status: "pending",
         history: [
           { action: "assigned", by: req.user._id, to: staffId, note: remarks || "First assignment" },
         ],
@@ -171,6 +147,9 @@ let existingTask = order.tasks.find((t) =>
 
       order.tasks.push(newTask._id);
       await order.save();
+
+      // ✅ Update order/suborder status after first assignment
+      await updateOrderStatus(itemId || orderId, stage);
 
       return res.status(201).json({
         success: true,
