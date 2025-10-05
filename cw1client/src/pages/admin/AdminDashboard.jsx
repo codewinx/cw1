@@ -131,66 +131,49 @@ const AdminDashboard = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div
             onClick={() => navigate("/admin/orders")}
-            className="bg-white shadow-md rounded-lg p-4 border border-pink-200/30 cursor-pointer hover:shadow-lg hover:border-pink-300 transition-all"
+            className="bg-gradient-to-br from-white to-pink-50/30 shadow-lg rounded-2xl p-6 border-2 border-pink-200/40 cursor-pointer hover:shadow-2xl hover:border-pink-300/60 hover:scale-105 transition-all duration-300"
           >
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-gray-500 text-xs mb-1">Total Orders</p>
-                <h2 className="text-2xl font-bold text-gray-900">
+                <p className="text-gray-600 text-sm font-semibold mb-2">Total Orders</p>
+                <h2 className="text-5xl font-bold bg-gradient-to-r from-pink-600 to-pink-700 bg-clip-text text-transparent">
                   {stats.totalOrders}
                 </h2>
               </div>
-              <div className="bg-pink-50 p-2 rounded-lg">
-                <ShoppingCart className="w-5 h-5 text-pink-500" />
+              <div className="bg-gradient-to-br from-pink-500 to-pink-600 p-3 rounded-xl shadow-md">
+                <ShoppingCart className="w-7 h-7 text-white" />
               </div>
             </div>
           </div>
 
           <div
             onClick={() => navigate("/admin/customers")}
-            className="bg-white shadow-md rounded-lg p-4 border border-blue-200/30 cursor-pointer hover:shadow-lg hover:border-blue-300 transition-all"
+            className="bg-gradient-to-br from-white to-blue-50/30 shadow-lg rounded-2xl p-6 border-2 border-blue-200/40 cursor-pointer hover:shadow-2xl hover:border-blue-300/60 hover:scale-105 transition-all duration-300"
           >
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-gray-500 text-xs mb-1">Total Customers</p>
-                <h2 className="text-2xl font-bold text-gray-900">
+                <p className="text-gray-600 text-sm font-semibold mb-2">Total Customers</p>
+                <h2 className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-blue-700 bg-clip-text text-transparent">
                   {stats.activeCustomers}
                 </h2>
               </div>
-              <div className="bg-blue-50 p-2 rounded-lg">
-                <Users className="w-5 h-5 text-blue-500" />
-              </div>
-            </div>
-          </div>
-
-          <div
-            onClick={() => navigate("/admin/tasks")}
-            className="bg-white shadow-md rounded-lg p-4 border border-yellow-200/30 cursor-pointer hover:shadow-lg hover:border-yellow-300 transition-all"
-          >
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-gray-500 text-xs mb-1">Pending Tasks</p>
-                <h2 className="text-2xl font-bold text-gray-900">
-                  {stats.pendingTasks}
-                </h2>
-              </div>
-              <div className="bg-yellow-50 p-2 rounded-lg">
-                <ClipboardList className="w-5 h-5 text-yellow-500" />
+              <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-3 rounded-xl shadow-md">
+                <Users className="w-7 h-7 text-white" />
               </div>
             </div>
           </div>
 
           <div
             onClick={() => navigate("/admin/payments")}
-            className="bg-white shadow-md rounded-lg p-4 border border-green-200/30 cursor-pointer hover:shadow-lg hover:border-green-300 transition-all"
+            className="bg-gradient-to-br from-white to-green-50/30 shadow-lg rounded-2xl p-6 border-2 border-green-200/40 cursor-pointer hover:shadow-2xl hover:border-green-300/60 hover:scale-105 transition-all duration-300"
           >
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-gray-500 text-xs mb-1">Total Revenue</p>
-                <h2 className="text-2xl font-bold text-gray-900">
+                <p className="text-gray-600 text-sm font-semibold mb-2">Total Revenue</p>
+                <h2 className="text-5xl font-bold bg-gradient-to-r from-green-600 to-green-700 bg-clip-text text-transparent">
                   $
                   {stats.revenue.toLocaleString(undefined, {
                     minimumFractionDigits: 2,
@@ -198,8 +181,8 @@ const AdminDashboard = () => {
                   })}
                 </h2>
               </div>
-              <div className="bg-green-50 p-2 rounded-lg">
-                <DollarSign className="w-5 h-5 text-green-500" />
+              <div className="bg-gradient-to-br from-green-500 to-green-600 p-3 rounded-xl shadow-md">
+                <DollarSign className="w-7 h-7 text-white" />
               </div>
             </div>
           </div>
