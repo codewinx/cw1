@@ -1,20 +1,20 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { getOrders } from "../../api/order";
 import { fetchCustomers } from "../../api/customer";
 import { getAllTasks } from "../../api/task";
+import { getOrderStats } from "../../api/admin";
 import {
   ShoppingCart,
   Users,
-  Clock,
   DollarSign,
   Plus,
   Package,
   Eye,
   X,
-  TrendingUp,
   Activity,
+  ClipboardList,
 } from "lucide-react";
-
 import AdminAddOrder from "./AdminAddOrder";
 
 const AdminDashboard = () => {
@@ -27,103 +27,54 @@ const AdminDashboard = () => {
 
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [taskSummary, setTaskSummary] = useState({
-    cutting: 0,
-    tailoring: 0,
-    handwork: 0,
-    qualityCheck: 0,
-  });
-
+  const [showAddOrder, setShowAddOrder] = useState(false);
   const [workflow, setWorkflow] = useState({
     placed: 0,
     cutting: 0,
+    handworking: 0,
     tailoring: 0,
-    handwork: 0,
-    finishing: 0,
     qualityCheck: 0,
-    completed: 0,
+    readyToDeliver: 0,
   });
 
-  const [showAddOrder, setShowAddOrder] = useState(false);
-
-  // workflow steps list
-  const workflowSteps = [
-    { name: "Placed", key: "placed" },
-    { name: "Cutting", key: "cutting" },
-    { name: "Tailoring", key: "tailoring" },
-    { name: "Handwork", key: "handwork" },
-    { name: "Finishing", key: "finishing" },
-    { name: "Quality Check", key: "qualityCheck" },
-    { name: "Completed", key: "completed" },
-  ];
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [ordersRes, customers, tasks] = await Promise.all([
+        const [ordersRes, customers, tasks, orderStatsRes] = await Promise.all([
           getOrders(),
           fetchCustomers(),
           getAllTasks(),
+          getOrderStats(),
         ]);
 
         setOrders(ordersRes);
 
+        const ordersCount = Object.values(orderStatsRes.data || {}).reduce(
+          (sum, count) => sum + count,
+          0
+        );
+
+        const tasksArray = tasks.data || tasks;
+        const pendingCount = Array.isArray(tasksArray)
+          ? tasksArray.filter(
+              (task) => task.status === "pending" || task.status === "Pending"
+            ).length
+          : 0;
+
+        const revenue = ordersRes
+          .filter((order) => order.status === "completed")
+          .reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+
         setStats({
-          totalOrders: ordersRes.length,
-          activeCustomers: customers.length,
-          pendingTasks: tasks.filter((t) => t.status === "Pending").length,
-          revenue: ordersRes.reduce((sum, o) => sum + (o.totalAmount || 0), 0),
+          totalOrders: ordersCount,
+          activeCustomers: Array.isArray(customers) ? customers.length : 0,
+          pendingTasks: pendingCount,
+          revenue: revenue,
         });
-
-        setTaskSummary({
-          cutting: tasks.filter((t) => t.type === "Cutting").length,
-          tailoring: tasks.filter((t) => t.type === "Tailoring").length,
-          handwork: tasks.filter((t) => t.type === "Handwork").length,
-          qualityCheck: tasks.filter((t) => t.type === "Quality Check").length,
-        });
-
-        // calculate workflow from orders
-        const workflowCounts = {
-          placed: 0,
-          cutting: 0,
-          tailoring: 0,
-          handwork: 0,
-          finishing: 0,
-          qualityCheck: 0,
-          completed: 0,
-        };
-
-        ordersRes.forEach((order) => {
-          switch (order.status) {
-            case "Placed":
-              workflowCounts.placed++;
-              break;
-            case "Cutting":
-              workflowCounts.cutting++;
-              break;
-            case "Tailoring":
-              workflowCounts.tailoring++;
-              break;
-            case "Handwork":
-              workflowCounts.handwork++;
-              break;
-            case "Finishing":
-              workflowCounts.finishing++;
-              break;
-            case "Quality Check":
-              workflowCounts.qualityCheck++;
-              break;
-            case "Completed":
-              workflowCounts.completed++;
-              break;
-            default:
-              break;
-          }
-        });
-
-        setWorkflow(workflowCounts);
       } catch (err) {
-        console.error("Error loading dashboard", err);
+        console.error("Error fetching stats", err);
       } finally {
         setLoading(false);
       }
@@ -132,88 +83,42 @@ const AdminDashboard = () => {
     fetchData();
   }, []);
 
-  const StatCard = ({ title, value, icon: Icon, trend, bgColor, iconColor }) => (
-    <div className="group relative bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-pink-200/30 p-6 hover:shadow-xl hover:border-pink-300/50 transition-all duration-500 transform hover:scale-[1.02] overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-pink-50/40 via-white/20 to-purple-50/40 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-      <div className="absolute -top-4 -right-4 w-24 h-24 bg-gradient-to-br from-pink-200/20 to-purple-200/20 rounded-full blur-xl opacity-60"></div>
-
-      <div className="relative z-10">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <div className="flex items-center mb-3">
-              <div className={`${bgColor} p-3 rounded-xl shadow-md border border-white/50 mr-4`}>
-                <Icon className={`w-6 h-6 ${iconColor}`} />
-              </div>
-              <p className="text-gray-600 text-sm font-medium uppercase tracking-wide">{title}</p>
-            </div>
-            <p className="text-3xl font-bold text-gray-800 mb-2 group-hover:text-gray-900 transition-colors">
-              {value}
-            </p>
-            {trend && (
-              <div className="flex items-center">
-                <TrendingUp
-                  className={`w-4 h-4 mr-1 ${
-                    trend.startsWith("+") ? "text-emerald-500" : "text-rose-500"
-                  }`}
-                />
-                <p
-                  className={`text-sm font-semibold ${
-                    trend.startsWith("+") ? "text-emerald-600" : "text-rose-600"
-                  }`}
-                >
-                  {trend}
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  const WorkflowStep = ({ step, count, stepNumber }) => {
-    const stepColors = [
-      "from-pink-400 to-rose-500 border-pink-300",
-      "from-purple-400 to-pink-500 border-purple-300",
-      "from-indigo-400 to-purple-500 border-indigo-300",
-      "from-blue-400 to-indigo-500 border-blue-300",
-      "from-teal-400 to-cyan-500 border-teal-300",
-      "from-emerald-400 to-teal-500 border-emerald-300",
-      "from-green-500 to-emerald-600 border-green-400",
-    ];
-
-    return (
-      <div className="flex flex-col items-center group">
-        <div
-          className={`bg-gradient-to-br ${stepColors[stepNumber - 1]} rounded-2xl w-16 h-16 flex items-center justify-center text-white font-bold text-lg mb-3 shadow-lg border-2 group-hover:scale-110 transition-all duration-300 relative overflow-hidden`}
-        >
-          <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-          <span className="relative z-10">{count || 0}</span>
-        </div>
-        <p className="text-sm font-semibold text-gray-700 text-center group-hover:text-gray-800 transition-colors">
-          {step}
-        </p>
-        <div className="w-8 h-0.5 bg-gradient-to-r from-pink-300 to-purple-300 mt-2 opacity-60"></div>
-      </div>
-    );
-  };
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await getOrderStats();
+        const statsData = res.data;
+        setWorkflow({
+          placed: statsData.placed || 0,
+          cutting: statsData.cutting || 0,
+          handworking: statsData.handworking || 0,
+          tailoring: statsData.tailoring || 0,
+          qualityCheck: statsData["quality-check"] || 0,
+          readyToDeliver: statsData["ready-to-deliver"] || 0,
+        });
+      } catch (err) {
+        console.error("Error fetching stats", err);
+      }
+    };
+    fetchStats();
+  }, []);
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-pink-50 p-6 flex items-center justify-center">
+      <div className="h-screen bg-pink-50 p-4 flex items-center justify-center overflow-hidden">
         <p className="text-gray-600 text-lg">Loading dashboard...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-pink-50 p-6 relative overflow-hidden">
-      <div className="max-w-7xl mx-auto space-y-8 relative z-10">
+    <div className="h-screen bg-pink-50 p-4 overflow-hidden">
+      <div className="max-w-7xl mx-auto h-full flex flex-col gap-4">
         {showAddOrder && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-md flex items-center justify-center z-50 p-4">
-            <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-6 w-full max-w-md relative shadow-2xl border border-pink-200/50">
+            <div className="bg-white/95 rounded-2xl p-6 w-full max-w-md relative shadow-2xl border border-pink-200/50">
               <button
-                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 p-2 rounded-xl hover:bg-pink-50 transition-all duration-200 border border-transparent hover:border-pink-200"
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 p-2 rounded-xl hover:bg-pink-50 transition-all"
                 onClick={() => setShowAddOrder(false)}
               >
                 <X className="w-5 h-5" />
@@ -223,142 +128,186 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {/* Header */}
-        <div className="mb-10 text-center">
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-pink-600 via-purple-600 to-pink-700 bg-clip-text text-transparent mb-4 drop-shadow-sm">
+        <div className="text-center py-3">
+          <h1 className="text-5xl font-bold bg-gradient-to-r from-pink-600 via-purple-600 to-pink-700 bg-clip-text text-transparent mb-2 ">
             Dashboard
           </h1>
-          <p className="text-gray-600 text-xl font-medium">Overview of your boutique operations</p>
-          <div className="w-24 h-1 bg-gradient-to-r from-pink-400 to-purple-400 mx-auto mt-4 rounded-full"></div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatCard
-            title="Total Orders"
-            value={stats.totalOrders}
-            icon={ShoppingCart}
-            trend="+12% from last month"
-            bgColor="bg-gradient-to-br from-pink-100 to-rose-200"
-            iconColor="text-pink-700"
-          />
-          <StatCard
-            title="Active Customers"
-            value={stats.activeCustomers}
-            icon={Users}
-            trend="+5% from last month"
-            bgColor="bg-gradient-to-br from-purple-100 to-indigo-200"
-            iconColor="text-purple-700"
-          />
-          <StatCard
-            title="Pending Tasks"
-            value={stats.pendingTasks}
-            icon={Clock}
-            trend="-3% from last week"
-            bgColor="bg-gradient-to-br from-amber-100 to-orange-200"
-            iconColor="text-orange-700"
-          />
-          <StatCard
-            title="Monthly Revenue"
-            value={`₹${stats.revenue.toLocaleString()}`}
-            icon={DollarSign}
-            trend="+18% from last month"
-            bgColor="bg-gradient-to-br from-emerald-100 to-teal-200"
-            iconColor="text-emerald-700"
-          />
-        </div>
-
-        {/* Orders + Quick Actions */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-pink-200/30 p-8 relative overflow-hidden">
-            <div className="relative z-10">
-              <div className="flex justify-between items-center mb-8">
-                <div className="flex items-center">
-                  <div className="bg-gradient-to-br from-pink-100 to-purple-100 p-3 rounded-xl mr-4 border border-pink-200/50">
-                    <Activity className="w-6 h-6 text-pink-700" />
-                  </div>
-                  <h2 className="text-2xl font-bold text-gray-800">All Orders</h2>
-                </div>
-                <button className="flex items-center text-pink-700 hover:text-pink-800 text-sm font-semibold bg-gradient-to-r from-pink-50 to-purple-50 hover:from-pink-100 hover:to-purple-100 px-4 py-2 rounded-xl transition-all duration-300 border border-pink-200/50 hover:border-pink-300/70 shadow-sm hover:shadow-md">
-                  <Eye className="w-4 h-4 mr-2" />
-                  View All
-                </button>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          {/* Total Orders */}
+          <div
+            onClick={() => navigate("/admin/orders")}
+            className="bg-white shadow-md rounded-lg p-4 border border-pink-200/30 cursor-pointer hover:shadow-lg hover:border-pink-300 transition-all"
+          >
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-gray-500 text-xs mb-1">Total Orders</p>
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {stats.totalOrders}
+                </h2>
               </div>
-
-              {orders.length === 0 ? (
-                <div className="text-center py-16">
-                  <div className="bg-gradient-to-br from-pink-100 to-purple-100 rounded-2xl w-24 h-24 mx-auto mb-6 flex items-center justify-center border border-pink-200/50 shadow-lg">
-                    <ShoppingCart className="w-10 h-10 text-pink-600" />
-                  </div>
-                  <p className="text-gray-700 font-semibold text-xl mb-2">No orders</p>
-                  <p className="text-gray-500 text-base">Orders will appear here once created</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b-2 border-pink-200/50">
-                        <th className="text-left text-sm font-bold text-gray-700 pb-4 uppercase tracking-wider">
-                          Order No
-                        </th>
-                        <th className="text-left text-sm font-bold text-gray-700 pb-4 uppercase tracking-wider">
-                          Customer
-                        </th>
-                        <th className="text-left text-sm font-bold text-gray-700 pb-4 uppercase tracking-wider">
-                          Status
-                        </th>
-                        {/* <th className="text-left text-sm font-bold text-gray-700 pb-4 uppercase tracking-wider">
-                          Total
-                        </th> */}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {orders.map((order, index) => (
-                        <tr
-                          key={order._id}
-                          className="border-b border-pink-100/50 hover:bg-gradient-to-r hover:from-pink-50/30 hover:to-purple-50/30 transition-all duration-300 group"
-                        >
-                          <td className="py-4 text-sm font-semibold text-gray-800 group-hover:text-gray-900">
-                            {String(index + 1).padStart(3, "0")}
-                          </td>
-                          <td className="py-4 text-sm text-gray-600 font-medium group-hover:text-gray-700">
-                            {order.customer?.name}
-                          </td>
-                          <td className="py-4">
-                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-pink-100 to-purple-100 text-pink-800 border border-pink-200/50 shadow-sm">
-                              {order.status}
-                            </span>
-                          </td>
-                          {/* <td className="py-4 text-sm font-bold text-gray-800 group-hover:text-gray-900">
-                            ₹{(order.totalAmount || 0).toLocaleString()}
-                          </td> */}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+              <div className="bg-pink-50 p-2 rounded-lg">
+                <ShoppingCart className="w-5 h-5 text-pink-500" />
+              </div>
             </div>
           </div>
 
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-pink-200/30 p-8 relative overflow-hidden">
-            <div className="relative z-10">
-              <div className="flex items-center mb-8">
-                <div className="bg-gradient-to-br from-purple-100 to-pink-100 p-3 rounded-xl mr-4 border border-purple-200/50">
-                  <Plus className="w-6 h-6 text-purple-700" />
-                </div>
-                <h2 className="text-2xl font-bold text-gray-800">Quick Actions</h2>
+          {/* Total Customers */}
+          <div
+            onClick={() => navigate("/admin/customers")}
+            className="bg-white shadow-md rounded-lg p-4 border border-blue-200/30 cursor-pointer hover:shadow-lg hover:border-blue-300 transition-all"
+          >
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-gray-500 text-xs mb-1">Total Customers</p>
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {stats.activeCustomers}
+                </h2>
               </div>
-              <div className="space-y-4">
+              <div className="bg-blue-50 p-2 rounded-lg">
+                <Users className="w-5 h-5 text-blue-500" />
+              </div>
+            </div>
+          </div>
+
+          {/* Pending Tasks */}
+          <div
+            onClick={() => navigate("/admin/tasks")}
+            className="bg-white shadow-md rounded-lg p-4 border border-yellow-200/30 cursor-pointer hover:shadow-lg hover:border-yellow-300 transition-all"
+          >
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-gray-500 text-xs mb-1">Pending Tasks</p>
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {stats.pendingTasks}
+                </h2>
+              </div>
+              <div className="bg-yellow-50 p-2 rounded-lg">
+                <ClipboardList className="w-5 h-5 text-yellow-500" />
+              </div>
+            </div>
+          </div>
+
+          {/* Total Revenue */}
+          <div
+            onClick={() => navigate("/admin/payments")}
+            className="bg-white shadow-md rounded-lg p-4 border border-green-200/30 cursor-pointer hover:shadow-lg hover:border-green-300 transition-all"
+          >
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-gray-500 text-xs mb-1">Total Revenue</p>
+                <h2 className="text-2xl font-bold text-gray-900">
+                  $
+                  {stats.revenue.toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </h2>
+              </div>
+              <div className="bg-green-50 p-2 rounded-lg">
+                <DollarSign className="w-5 h-5 text-green-500" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Orders + Quick Actions */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 max-h-65">
+          <div className="lg:col-span-2 bg-white/80 rounded-xl shadow-md border border-pink-200/30 p-3 flex flex-col overflow-hidden">
+            <div className="flex justify-between items-center mb-3">
+              <div className="flex items-center">
+                <div className="bg-gradient-to-br from-pink-100 to-purple-100 p-1.5 rounded-lg mr-2 border border-pink-200/50">
+                  <Activity className="w-4 h-4 text-pink-700" />
+                </div>
+                <h2 className="text-sm font-bold text-gray-800">All Orders</h2>
+              </div>
+              <button
+                onClick={() => navigate("/admin/orders")}
+                className="flex items-center text-pink-700 hover:text-pink-800 text-xs font-semibold bg-gradient-to-r from-pink-50 to-purple-50 hover:from-pink-100 hover:to-purple-100 px-2 py-1 rounded-lg transition-all duration-300 border border-pink-200/50 hover:border-pink-300/70 shadow-sm"
+              >
+                <Eye className="w-3 h-3 mr-1" />
+                View All
+              </button>
+            </div>
+
+            {orders.length === 0 ? (
+              <div className="text-center py-4 flex-1 flex flex-col items-center justify-center">
+                <div className="bg-gradient-to-br from-pink-100 to-purple-100 rounded-lg w-12 h-12 mx-auto mb-2 flex items-center justify-center border border-pink-200/50 shadow-md">
+                  <ShoppingCart className="w-6 h-6 text-pink-600" />
+                </div>
+                <p className="text-gray-700 font-semibold text-sm mb-1">
+                  No orders
+                </p>
+                <p className="text-gray-500 text-xs">
+                  Orders will appear here once created
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-y-auto flex-1 -mx-3 px-3 scrollbar-thin scrollbar-thumb-pink-300 scrollbar-track-pink-50">
+                <table className="w-full">
+                  <thead className="sticky top-0 bg-white/95 z-10">
+                    <tr className="border-b border-pink-200/50">
+                      <th className="text-left text-xs font-bold text-gray-700 pb-2">
+                        Order No
+                      </th>
+                      <th className="text-left text-xs font-bold text-gray-700 pb-2">
+                        Customer
+                      </th>
+                      <th className="text-left text-xs font-bold text-gray-700 pb-2">
+                        Status
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orders.map((order, index) => (
+                      <tr
+                        key={order._id}
+                        className="border-b border-pink-100/50 hover:bg-pink-50/30 transition-all"
+                      >
+                        <td className="py-2 text-xs font-semibold text-gray-800">
+                          {String(index + 1).padStart(3, "0")}
+                        </td>
+                        <td className="py-2 text-xs text-gray-600 font-medium">
+                          {order.customer?.name}
+                        </td>
+                        <td className="py-2">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-gradient-to-r from-pink-100 to-purple-100 text-pink-800 border border-pink-200/50 shadow-sm">
+                            {order.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Quick Actions */}
+          <div className="relative bg-gradient-to-br from-purple-50 via-pink-50 to-white rounded-xl shadow-lg border border-purple-200/40 p-4 flex flex-col overflow-hidden">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-pink-200/30 to-purple-200/30 rounded-full blur-2xl -mr-12 -mt-12"></div>
+            <div className="absolute bottom-0 left-0 w-20 h-20 bg-gradient-to-tr from-purple-200/20 to-pink-200/20 rounded-full blur-xl -ml-10 -mb-10"></div>
+            <div className="relative z-10">
+              <div className="flex items-center mb-4">
+                <div className="bg-gradient-to-br from-purple-500 to-pink-500 p-2 rounded-xl mr-2 shadow-md">
+                  <Plus className="w-4 h-4 text-white" />
+                </div>
+                <h2 className="text-sm font-bold bg-gradient-to-r from-purple-700 to-pink-600 bg-clip-text text-transparent">
+                  Quick Actions
+                </h2>
+              </div>
+              <div className="space-y-2.5">
                 <button
                   onClick={() => setShowAddOrder(true)}
-                  className="w-full flex items-center justify-center px-6 py-4 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white rounded-xl font-bold text-base transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 border border-pink-400/50 group"
+                  className="relative w-full flex items-center justify-center px-3 py-2.5 bg-gradient-to-r from-pink-500 via-purple-500 to-pink-600 hover:from-pink-600 hover:via-purple-600 hover:to-pink-700 text-white rounded-xl font-bold text-xs transition-all duration-500 shadow-lg hover:shadow-xl transform hover:scale-[1.03]"
                 >
-                  <Plus className="w-5 h-5 mr-2 group-hover:rotate-90 transition-transform duration-300" />
+                  <Plus className="w-3.5 h-3.5 mr-1.5" />
                   New Order
                 </button>
-                <button className="w-full flex items-center justify-center px-6 py-4 bg-white/90 hover:bg-white text-gray-700 hover:text-gray-800 rounded-xl font-bold text-base transition-all duration-300 border-2 border-purple-300/50 hover:border-purple-400 shadow-md hover:shadow-lg transform hover:scale-105 group">
-                  <Package className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform duration-300" />
+                <button className="relative w-full flex items-center justify-center px-3 py-2.5 bg-gradient-to-r from-white to-purple-50/50 hover:from-purple-50 hover:to-pink-50 text-gray-700 hover:text-purple-700 rounded-xl font-bold text-xs transition-all duration-500 border-2 border-purple-300/60 hover:border-purple-400 shadow-md hover:shadow-lg transform hover:scale-[1.03]">
+                  <Package className="w-3.5 h-3.5 mr-1.5" />
                   Update Inventory
                 </button>
               </div>
@@ -366,32 +315,33 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        {/* Workflow */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-pink-200/30 p-8 relative overflow-hidden">
-          <div className="relative z-10">
-            <div className="flex items-center justify-center mb-10">
-              <div className="bg-gradient-to-br from-pink-100 to-purple-100 p-3 rounded-xl mr-4 border border-pink-200/50">
-                <Activity className="w-6 h-6 text-pink-700" />
-              </div>
-              <h2 className="text-2xl font-bold text-gray-800">Order Workflow Status</h2>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-6">
-              {workflowSteps.map((step, idx) => (
-                <WorkflowStep
-                  key={step.key}
-                  step={step.name}
-                  count={workflow[step.key]}
-                  stepNumber={idx + 1}
-                />
-              ))}
-            </div>
+        {/* Workflow Stats */}
+        <div className="bg-white/80 rounded-xl shadow-md border border-pink-200/40 p-4">
+          <h2 className="text-base font-bold text-gray-800 mb-4">
+            Order Workflow Overview
+          </h2>
+          <div className="flex justify-between items-end gap-2">
+            <WorkflowCard title="Placed" value={workflow.placed} color="bg-pink-500" />
+            <WorkflowCard title="Cutting" value={workflow.cutting} color="bg-yellow-500" />
+            <WorkflowCard title="Tailoring" value={workflow.tailoring} color="bg-blue-500" />
+            <WorkflowCard title="Handworking" value={workflow.handworking} color="bg-purple-500" />
+            <WorkflowCard title="Quality Check" value={workflow.qualityCheck} color="bg-orange-500" />
+            <WorkflowCard title="Ready to Deliver" value={workflow.readyToDeliver} color="bg-green-500" />
           </div>
         </div>
       </div>
     </div>
   );
 };
+
+const WorkflowCard = ({ title, value, color }) => (
+  <div className="flex flex-col items-center">
+    <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold ${color} shadow-md mb-2`}>
+      {value}
+    </div>
+    <p className="text-xs text-gray-800 font-semibold mb-1 text-center">{title}</p>
+  </div>
+);
 
 export default AdminDashboard;
 
@@ -400,66 +350,3 @@ export default AdminDashboard;
 
 
 
-
-// import React, { useEffect, useState } from "react";
-// import { getOrderStats } from "../../api/admin"; // ✅ import API
-
-// const AdminDashboard = () => {
-//   const [workflow, setWorkflow] = useState({
-//     placed: 0,
-//     cutting: 0,
-//     handworking: 0,
-//     tailoring: 0,
-//     qualityCheck: 0,
-//     readyToDeliver: 0,
-//   });
-
-//   useEffect(() => {
-//     const fetchStats = async () => {
-//       try {
-//         const res = await getOrderStats();
-//         const stats = res.data;
-
-//         setWorkflow({
-//           placed: stats.placed || 0,
-//           cutting: stats.cutting || 0,
-//           handworking: stats.handworking || 0,
-//           tailoring: stats.tailoring || 0,
-//           qualityCheck: stats["quality-check"] || 0,
-//           readyToDeliver: stats["ready-to-deliver"] || 0,
-//         });
-//       } catch (err) {
-//         console.error("Error fetching stats", err);
-//       }
-//     };
-
-//     fetchStats();
-//   }, []);
-
-//   return (
-//     <div className="min-h-screen bg-gray-100 p-8">
-//       <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
-
-//       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-//         <StatCard title="Placed Orders" value={workflow.placed} color="bg-blue-500" />
-//         <StatCard title="Cutting Orders" value={workflow.cutting} color="bg-purple-500" />
-//         <StatCard title="Handworking Orders" value={workflow.handworking} color="bg-pink-500" />
-//         <StatCard title="Tailoring Orders" value={workflow.tailoring} color="bg-indigo-500" />
-//         <StatCard title="Quality Check Orders" value={workflow.qualityCheck} color="bg-yellow-500" />
-//         <StatCard title="Ready to Deliver" value={workflow.readyToDeliver} color="bg-green-500" />
-//       </div>
-//     </div>
-//   );
-// };
-
-// // ✅ Small reusable card component
-// const StatCard = ({ title, value, color }) => (
-//   <div className="p-6 rounded-xl shadow-lg bg-white flex flex-col items-center">
-//     <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg ${color}`}>
-//       {value}
-//     </div>
-//     <p className="mt-3 text-gray-700 font-semibold">{title}</p>
-//   </div>
-// );
-
-// export default AdminDashboard;
