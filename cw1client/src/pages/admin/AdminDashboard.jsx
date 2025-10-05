@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { getOrders } from "../../api/order";
 import { fetchCustomers } from "../../api/customer";
 import { getAllTasks } from "../../api/task";
-import { getOrderStats } from "../../api/admin";
 import {
   ShoppingCart,
   Users,
@@ -42,19 +41,36 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [ordersRes, customers, tasks, orderStatsRes] = await Promise.all([
+        const [ordersRes, customers, tasks] = await Promise.all([
           getOrders(),
           fetchCustomers(),
           getAllTasks(),
-          getOrderStats(),
         ]);
 
         setOrders(ordersRes);
 
-        const ordersCount = Object.values(orderStatsRes.data || {}).reduce(
-          (sum, count) => sum + count,
-          0
-        );
+        // Calculate workflow counts based on order status
+        const newWorkflow = {
+          placed: 0,
+          cutting: 0,
+          handworking: 0,
+          tailoring: 0,
+          qualityCheck: 0,
+          readyToDeliver: 0,
+        };
+
+        ordersRes.forEach((order) => {
+          const status = order.status?.toLowerCase() || "";
+          if (status.includes("placed")) newWorkflow.placed++;
+          else if (status.includes("cutting") || status.includes("cutter"))
+            newWorkflow.cutting++;
+          else if (status.includes("handwork")) newWorkflow.handworking++;
+          else if (status.includes("tailor")) newWorkflow.tailoring++;
+          else if (status.includes("quality")) newWorkflow.qualityCheck++;
+          else if (status.includes("ready")) newWorkflow.readyToDeliver++;
+        });
+
+        setWorkflow(newWorkflow);
 
         const tasksArray = tasks.data || tasks;
         const pendingCount = Array.isArray(tasksArray)
@@ -68,7 +84,7 @@ const AdminDashboard = () => {
           .reduce((sum, o) => sum + (o.totalAmount || 0), 0);
 
         setStats({
-          totalOrders: ordersCount,
+          totalOrders: ordersRes.length,
           activeCustomers: Array.isArray(customers) ? customers.length : 0,
           pendingTasks: pendingCount,
           revenue: revenue,
@@ -83,26 +99,6 @@ const AdminDashboard = () => {
     fetchData();
   }, []);
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const res = await getOrderStats();
-        const statsData = res.data;
-        setWorkflow({
-          placed: statsData.placed || 0,
-          cutting: statsData.cutting || 0,
-          handworking: statsData.handworking || 0,
-          tailoring: statsData.tailoring || 0,
-          qualityCheck: statsData["quality-check"] || 0,
-          readyToDeliver: statsData["ready-to-deliver"] || 0,
-        });
-      } catch (err) {
-        console.error("Error fetching stats", err);
-      }
-    };
-    fetchStats();
-  }, []);
-
   if (loading) {
     return (
       <div className="h-screen bg-pink-50 p-4 flex items-center justify-center overflow-hidden">
@@ -113,7 +109,7 @@ const AdminDashboard = () => {
 
   return (
     <div className="h-screen bg-pink-50 p-4 overflow-hidden">
-      <div className="max-w-7xl mx-auto h-full flex flex-col gap-4">
+      <div className="max-w-7xl mx-auto h-full flex flex-col gap-4 overflow-hidden">
         {showAddOrder && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-md flex items-center justify-center z-50 p-4">
             <div className="bg-white/95 rounded-2xl p-6 w-full max-w-md relative shadow-2xl border border-pink-200/50">
@@ -129,14 +125,13 @@ const AdminDashboard = () => {
         )}
 
         <div className="text-center py-3">
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-pink-600 via-purple-600 to-pink-700 bg-clip-text text-transparent mb-2 ">
+          <h1 className="text-5xl font-bold bg-gradient-to-r from-pink-600 via-purple-600 to-pink-700 bg-clip-text text-transparent mb-2">
             Dashboard
           </h1>
         </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          {/* Total Orders */}
           <div
             onClick={() => navigate("/admin/orders")}
             className="bg-white shadow-md rounded-lg p-4 border border-pink-200/30 cursor-pointer hover:shadow-lg hover:border-pink-300 transition-all"
@@ -154,7 +149,6 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-          {/* Total Customers */}
           <div
             onClick={() => navigate("/admin/customers")}
             className="bg-white shadow-md rounded-lg p-4 border border-blue-200/30 cursor-pointer hover:shadow-lg hover:border-blue-300 transition-all"
@@ -172,7 +166,6 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-          {/* Pending Tasks */}
           <div
             onClick={() => navigate("/admin/tasks")}
             className="bg-white shadow-md rounded-lg p-4 border border-yellow-200/30 cursor-pointer hover:shadow-lg hover:border-yellow-300 transition-all"
@@ -190,7 +183,6 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-          {/* Total Revenue */}
           <div
             onClick={() => navigate("/admin/payments")}
             className="bg-white shadow-md rounded-lg p-4 border border-green-200/30 cursor-pointer hover:shadow-lg hover:border-green-300 transition-all"
@@ -214,7 +206,7 @@ const AdminDashboard = () => {
         </div>
 
         {/* Orders + Quick Actions */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 max-h-65">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 max-h-65 overflow-hidden">
           <div className="lg:col-span-2 bg-white/80 rounded-xl shadow-md border border-pink-200/30 p-3 flex flex-col overflow-hidden">
             <div className="flex justify-between items-center mb-3">
               <div className="flex items-center">
@@ -245,7 +237,7 @@ const AdminDashboard = () => {
                 </p>
               </div>
             ) : (
-              <div className="overflow-y-auto flex-1 -mx-3 px-3 scrollbar-thin scrollbar-thumb-pink-300 scrollbar-track-pink-50">
+              <div className="flex-1 -mx-3 px-3 overflow-hidden">
                 <table className="w-full">
                   <thead className="sticky top-0 bg-white/95 z-10">
                     <tr className="border-b border-pink-200/50">
@@ -285,7 +277,6 @@ const AdminDashboard = () => {
             )}
           </div>
 
-          {/* Quick Actions */}
           <div className="relative bg-gradient-to-br from-purple-50 via-pink-50 to-white rounded-xl shadow-lg border border-purple-200/40 p-4 flex flex-col overflow-hidden">
             <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-pink-200/30 to-purple-200/30 rounded-full blur-2xl -mr-12 -mt-12"></div>
             <div className="absolute bottom-0 left-0 w-20 h-20 bg-gradient-to-tr from-purple-200/20 to-pink-200/20 rounded-full blur-xl -ml-10 -mb-10"></div>
@@ -336,7 +327,9 @@ const AdminDashboard = () => {
 
 const WorkflowCard = ({ title, value, color }) => (
   <div className="flex flex-col items-center">
-    <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold ${color} shadow-md mb-2`}>
+    <div
+      className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold ${color} shadow-md mb-2`}
+    >
       {value}
     </div>
     <p className="text-xs text-gray-800 font-semibold mb-1 text-center">{title}</p>
@@ -344,9 +337,3 @@ const WorkflowCard = ({ title, value, color }) => (
 );
 
 export default AdminDashboard;
-
-
-
-
-
-
