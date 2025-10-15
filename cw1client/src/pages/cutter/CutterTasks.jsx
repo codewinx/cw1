@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { getTasks, updateStaff } from "../../api/cutter";
+import { getTasks, updateTaskStatus } from "../../api/cutter";
 
 const CurrentTasks = () => {
   const [tasks, setTasks] = useState([]);
@@ -8,25 +8,24 @@ const CurrentTasks = () => {
   const [statusUpdates, setStatusUpdates] = useState({});
   const [searchTerm, setSearchTerm] = useState("");
 
+  // Fetch tasks from backend
   const fetchTasks = async () => {
     try {
+      setLoading(true);
       const data = await getTasks();
 
-      // ✅ Use backend's `pending` array only
       let pendingTasks = Array.isArray(data?.pending) ? data.pending : [];
-
-      // ✅ Filter out reassigned tasks (they belong to reassigned page)
       pendingTasks = pendingTasks.filter(
         (task) => !task.wasReassigned && !task.isReassigned
       );
 
       setTasks(pendingTasks);
       setFilteredTasks(pendingTasks);
-      setLoading(false);
     } catch (err) {
       console.error("Error fetching tasks:", err);
       setTasks([]);
       setFilteredTasks([]);
+    } finally {
       setLoading(false);
     }
   };
@@ -35,6 +34,7 @@ const CurrentTasks = () => {
     fetchTasks();
   }, []);
 
+  // Search filter
   useEffect(() => {
     if (!searchTerm) {
       setFilteredTasks(tasks);
@@ -46,6 +46,7 @@ const CurrentTasks = () => {
     setFilteredTasks(temp);
   }, [searchTerm, tasks]);
 
+  // Handle status select
   const handleSelectChange = (taskId, value) => {
     setStatusUpdates((prev) => ({
       ...prev,
@@ -53,26 +54,35 @@ const CurrentTasks = () => {
     }));
   };
 
+  // Save status to backend
   const handleSaveStatus = async (taskId) => {
     try {
       const status = statusUpdates[taskId];
       if (!status) return;
 
-      await updateStaff(taskId, { status });
+      await updateTaskStatus(taskId, status);
 
-      // ✅ remove updated task from current list (since pending → in-progress/done)
       const updatedTasks = tasks.filter((task) => task._id !== taskId);
       setTasks(updatedTasks);
       setFilteredTasks(updatedTasks);
+
+      alert("✅ Task status updated successfully");
     } catch (err) {
       console.error("Error updating status:", err);
+      alert("❌ Failed to update task status");
     }
   };
 
   const getStatusBadge = (status) => {
     switch (status) {
       case "pending":
-        return "bg-red-100 text-red-700";
+        return "bg-yellow-100 text-yellow-700";
+      case "in-progress":
+        return "bg-blue-100 text-blue-700";
+      case "done":
+        return "bg-green-100 text-green-700";
+      case "reassigned":
+        return "bg-gray-100 text-gray-700";
       default:
         return "bg-gray-100 text-gray-700";
     }
@@ -85,7 +95,7 @@ const CurrentTasks = () => {
     );
 
   return (
-    <div className="p-2">
+    <div className="p-4">
       <h2 className="text-2xl font-bold mb-4 text-gray-800">Pending Tasks</h2>
 
       {/* Search Bar */}
@@ -122,13 +132,16 @@ const CurrentTasks = () => {
 
             {/* Task Details */}
             <div className="divide-y text-sm">
+              {/* Service */}
               <div className="px-4 py-3 flex justify-between items-center">
                 <span className="font-medium text-gray-600">Service</span>
                 <span className="text-gray-800">
-                  {task.order?.service || "N/A"}
+                  {task.order?.service?.name || "N/A"} (
+                  {task.order?.service?.category})
                 </span>
               </div>
 
+              {/* Expected Date */}
               <div className="px-4 py-3 flex justify-between items-center">
                 <span className="font-medium text-gray-600">Expected</span>
                 <span className="text-gray-800">
@@ -139,25 +152,28 @@ const CurrentTasks = () => {
               </div>
 
               {/* Measurements */}
-              <div className="px-4 py-3 flex flex-col sm:flex-row sm:justify-between gap-4">
-                <div className="flex-1 min-w-[50%]">
-                  <span className="font-medium text-gray-600 block mb-1">
-                    Measurements
-                  </span>
-                  {task.order?.measurement?.length > 0 ? (
-                    <ul className="list-disc ml-5 text-gray-700 text-xs">
-                      {task.order.measurement.map((m) => (
-                        <li key={m._id}>
-                          <strong>{m.category}:</strong>{" "}
-                          {m.data.map((d) => `${d.key}: ${d.value}`).join(", ")}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <span className="text-gray-400">N/A</span>
-                  )}
-                </div>
-              </div>
+<div className="px-4 py-3">
+  <span className="font-medium text-gray-600 block mb-1">
+    Measurements
+  </span>
+  {task.order?.service?.measurements?.length > 0 ? (
+    <ul className="list-disc ml-5 text-gray-700 text-xs">
+      {task.order.service.measurements.map((label, index) => {
+        const valueObj = task.order?.measurements?.find(
+          (m) => m.fieldName === label
+        );
+        return (
+          <li key={index}>
+            <strong>{label}:</strong> {valueObj?.value || "-"}
+          </li>
+        );
+      })}
+    </ul>
+  ) : (
+    <span className="text-gray-400">N/A</span>
+  )}
+</div>
+
 
               {/* Controls */}
               <div className="px-4 py-3 flex items-center gap-2">

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { getStaff, updateProfile } from "../../api/cutter";
+import { getCurrentStaff, updateProfile } from "../../api/cutter";
 
 const CutterProfile = ({ setShowProfile }) => {
   const [cutter, setCutter] = useState(null);
@@ -9,7 +9,7 @@ const CutterProfile = ({ setShowProfile }) => {
   useEffect(() => {
     const fetchCutter = async () => {
       try {
-        const data = await getStaff();
+        const data = await getCurrentStaff();
         const cutterStaff = Array.isArray(data)
           ? data.find((staff) => staff.role === "Cutter") || data[0]
           : data;

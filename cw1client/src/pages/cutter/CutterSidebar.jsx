@@ -27,37 +27,47 @@ const CutterSidebar = () => {
   }, []);
 
   // Fetch tasks and keep only unique orderNo
-  useEffect(() => {
-    const fetchCounts = async () => {
-      try {
-        const data = await getTasks();
+  const fetchTasks = async () => {
+    try {
+      const data = await getTasks();
 
-        const uniqueByOrder = (arr) => {
-          const seen = new Set();
-          return arr.filter((task) => {
-            const orderNo = task?.order?.orderNo;
-            if (seen.has(orderNo)) return false;
-            seen.add(orderNo);
-            return true;
-          });
-        };
-
-        setTasks({
-          pending: uniqueByOrder(data.pending || []),
-          inProgress: uniqueByOrder(data.inProgress || []),
-          completed: uniqueByOrder(data.completed || []),
-          reassigned: uniqueByOrder(data.reassigned || []),
+      const uniqueByOrder = (arr) => {
+        const seen = new Set();
+        return arr.filter((task) => {
+          const orderNo = task?.order?.orderNo;
+          if (!orderNo) return false;
+          if (seen.has(orderNo)) return false;
+          seen.add(orderNo);
+          return true;
         });
-      } catch (err) {
-        console.error("Error fetching tasks:", err);
-      }
-    };
-    fetchCounts();
+      };
+
+      // Include "done" status from completed tasks
+      const completedTasks = (data.completed || []).map((t) => ({
+        ...t,
+        status: t.status || "done",
+      }));
+
+      setTasks({
+        pending: uniqueByOrder(data.pending || []),
+        inProgress: uniqueByOrder(data.inProgress || []),
+        completed: uniqueByOrder(completedTasks),
+        reassigned: uniqueByOrder(data.reassigned || []),
+      });
+    } catch (err) {
+      console.error("Error fetching tasks:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchTasks();
+    const interval = setInterval(fetchTasks, 30000); // refresh every 30s
+    return () => clearInterval(interval);
   }, []);
 
   const menuItems = [
     { icon: BarChart3, label: "Dashboard", path: "/cutter/dashboard" },
-    { icon: ClipboardList, label: "Assigned Tasks", path: "/cutter/cuttertasks",count: tasks.pending.length },
+    { icon: ClipboardList, label: "Assigned Tasks", path: "/cutter/cuttertasks", count: tasks.pending.length },
     { icon: Clock, label: "In Progress", path: "/cutter/cutterinprogress", count: tasks.inProgress.length },
     { icon: CheckCircle, label: "Completed", path: "/cutter/cuttercompleted", count: tasks.completed.length },
     { icon: ClipboardList, label: "Reassigned", path: "/cutter/cutterreassign", count: tasks.reassigned.length },

@@ -9,6 +9,7 @@ import serviceRoutes from "./routes/serviceRoutes.js";
 import staffRoutes from "./routes/staffRoutes.js";
 import taskRoutes from "./routes/taskRoutes.js";
 import customerRoutes from "./routes/customerRoutes.js";
+import cutterRoutes from "./routes/cutterRoutes.js";
 
 dotenv.config();
 connectDB();
@@ -32,6 +33,7 @@ app.use("/api", serviceRoutes);
 app.use("/api/staff", staffRoutes);
 app.use("/api/task", taskRoutes);
 app.use("/api/customer", customerRoutes);
+app.use("/api/cutter", cutterRoutes);
 
 app.get("/", (req, res) => {
   res.send("API is running...");

@@ -1,13 +1,19 @@
 import api from "./axios";
 
-export const getStaff = async () => {
-  const token = localStorage.getItem("token");
-  const res = await api.get("/api/cutter/getcutterdetails", {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-  return res.data;
+// Get current logged-in staff
+export const getCurrentStaff = async () => {
+  try {
+    const token = localStorage.getItem("token"); // JWT token
+    const res = await api.get("/api/cutter/me", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return res.data; // { success: true, staff: { ... } }
+  } catch (err) {
+    console.error("Error fetching current staff:", err);
+    throw err;
+  }
 };
 
 export const updateStaff = async (id, data) => {
@@ -41,3 +47,18 @@ export const updateProfile = async (id,formdata) => {
   return res.data;
 };
 
+export const updateTaskStatus = async (taskId, status, remarks = "") => {
+  const token = localStorage.getItem("token");
+
+  const res = await api.put(
+    `/api/cutter/${taskId}`, // remove /status
+    { status, remarks },
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  return res.data;
+};

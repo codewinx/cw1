@@ -1,4 +1,3 @@
-// src/pages/cutter/CutterReassign.jsx
 import React, { useEffect, useState } from "react";
 import { getTasks, updateStaff } from "../../api/cutter";
 
@@ -11,20 +10,20 @@ const CutterReassign = () => {
 
   const fetchTasks = async () => {
     try {
+      setLoading(true);
       const data = await getTasks();
       let reassigned = Array.isArray(data?.reassigned) ? data.reassigned : [];
 
-      // ✅ Ensure wasReassigned flag always true
-      reassigned = reassigned.map((t) => ({ ...t, wasReassigned: true }));
+      // Always mark as reassigned
+      reassigned = reassigned.map(t => ({ ...t, wasReassigned: true }));
 
-      // ✅ Remove duplicate orderNo (keep latest reassigned one)
-      let uniqueByOrder = Object.values(
+      // Remove duplicates by orderNo (keep latest updated)
+      const uniqueTasks = Object.values(
         reassigned.reduce((acc, task) => {
           const orderNo = task.order?.orderNo;
           if (!orderNo || !acc[orderNo]) {
             acc[orderNo] = task;
           } else {
-            // always keep the latest (assume updatedAt exists, else prefer current loop one)
             if (
               new Date(task.updatedAt || task.createdAt) >
               new Date(acc[orderNo].updatedAt || acc[orderNo].createdAt)
@@ -36,13 +35,13 @@ const CutterReassign = () => {
         }, {})
       );
 
-      setTasks(uniqueByOrder);
-      setFilteredTasks(uniqueByOrder);
-      setLoading(false);
+      setTasks(uniqueTasks);
+      setFilteredTasks(uniqueTasks);
     } catch (err) {
       console.error("Error fetching reassigned tasks:", err);
       setTasks([]);
       setFilteredTasks([]);
+    } finally {
       setLoading(false);
     }
   };
@@ -51,21 +50,21 @@ const CutterReassign = () => {
     fetchTasks();
   }, []);
 
-  // 🔎 Search
+  // 🔎 Search filter
   useEffect(() => {
     if (!searchTerm) {
       setFilteredTasks(tasks);
       return;
     }
     setFilteredTasks(
-      tasks.filter((task) =>
+      tasks.filter(task =>
         task.order?.orderNo?.toString().includes(searchTerm)
       )
     );
   }, [searchTerm, tasks]);
 
   const handleSelectChange = (taskId, value) => {
-    setStatusUpdates((prev) => ({ ...prev, [taskId]: value }));
+    setStatusUpdates(prev => ({ ...prev, [taskId]: value }));
   };
 
   const handleSaveStatus = async (taskId) => {
@@ -73,14 +72,12 @@ const CutterReassign = () => {
       const status = statusUpdates[taskId];
       if (!status) return;
 
-      // ✅ Always include wasReassigned so badge carries forward
       await updateStaff(taskId, { status, wasReassigned: true });
 
-      // ✅ Remove from reassigned page immediately (it will show in Done/InProgress with badge)
-      setTasks((prev) => prev.filter((task) => task._id !== taskId));
-      setFilteredTasks((prev) => prev.filter((task) => task._id !== taskId));
+      setTasks(prev => prev.filter(t => t._id !== taskId));
+      setFilteredTasks(prev => prev.filter(t => t._id !== taskId));
 
-      setStatusUpdates((prev) => {
+      setStatusUpdates(prev => {
         const updated = { ...prev };
         delete updated[taskId];
         return updated;
@@ -90,7 +87,7 @@ const CutterReassign = () => {
     }
   };
 
-  const getStatusBadge = (status) => {
+  const getStatusBadge = status => {
     switch (status) {
       case "pending":
         return "bg-red-100 text-red-700";
@@ -107,17 +104,11 @@ const CutterReassign = () => {
 
   if (loading) return <p className="text-center mt-6">Loading tasks...</p>;
   if (!filteredTasks.length)
-    return (
-      <p className="text-center mt-6 text-gray-500">
-        No reassigned tasks found.
-      </p>
-    );
+    return <p className="text-center mt-6 text-gray-500">No reassigned tasks found.</p>;
 
   return (
-    <div className="p-2">
-      <h2 className="text-2xl font-bold mb-4 text-gray-800">
-        Reassigned Tasks
-      </h2>
+    <div className="p-4">
+      <h2 className="text-2xl font-bold mb-4 text-gray-800">Reassigned Tasks</h2>
 
       {/* Search */}
       <div className="mb-4">
@@ -125,13 +116,14 @@ const CutterReassign = () => {
           type="text"
           placeholder="Search by Order No"
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={e => setSearchTerm(e.target.value)}
           className="border border-gray-300 px-3 py-2 rounded w-full sm:w-1/2 focus:outline-none focus:ring-2 focus:ring-pink-400 shadow-sm"
         />
       </div>
 
+      {/* Task Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {filteredTasks.map((task) => (
+        {filteredTasks.map(task => (
           <div
             key={task._id}
             className="border rounded-lg shadow-md bg-white hover:shadow-lg transition overflow-hidden"
@@ -153,37 +145,31 @@ const CutterReassign = () => {
               </span>
             </div>
 
-            {/* Body */}
+            {/* Details */}
             <div className="divide-y text-sm px-4 py-3">
-              {/* Service */}
               <div className="flex justify-between items-center">
                 <span className="font-medium text-gray-600">Service</span>
                 <span className="text-gray-800">
-                  {task.order?.service || "N/A"}
+                  {task.order?.service?.name || "N/A"} ({task.order?.service?.category || "N/A"})
                 </span>
               </div>
 
-              {/* Deadline */}
               <div className="flex justify-between items-center mt-2">
-                <span className="font-medium text-gray-600">Expected Date</span>
+                <span className="font-medium text-gray-600">Expected</span>
                 <span className="text-gray-800">
-                  {task.deadline
-                    ? new Date(task.deadline).toDateString()
+                  {task.order?.expectedDate
+                    ? new Date(task.order.expectedDate).toDateString()
                     : "N/A"}
                 </span>
               </div>
 
-              {/* Measurements */}
               <div className="mt-2">
-                <span className="font-medium text-gray-600 block mb-1">
-                  Measurements
-                </span>
-                {task.order?.measurement?.length > 0 ? (
+                <span className="font-medium text-gray-600 block mb-1">Measurements</span>
+                {task.order?.measurements?.length > 0 ? (
                   <ul className="list-disc ml-5 text-gray-700 text-xs">
-                    {task.order.measurement.map((m) => (
-                      <li key={m._id}>
-                        <strong>{m.category}:</strong>{" "}
-                        {m.data.map((d) => `${d.key}: ${d.value}`).join(", ")}
+                    {task.order.measurements.map((m, i) => (
+                      <li key={i}>
+                        <strong>{m.fieldName}:</strong> {m.value || "-"}
                       </li>
                     ))}
                   </ul>
@@ -196,9 +182,7 @@ const CutterReassign = () => {
               <div className="flex items-center gap-2 mt-3">
                 <select
                   value={statusUpdates[task._id] || ""}
-                  onChange={(e) =>
-                    handleSelectChange(task._id, e.target.value)
-                  }
+                  onChange={e => handleSelectChange(task._id, e.target.value)}
                   className="border border-gray-300 px-2 py-1 rounded w-full text-sm focus:outline-none focus:ring-2 focus:ring-pink-400 shadow-sm"
                 >
                   <option value="" disabled>

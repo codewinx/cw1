@@ -6,34 +6,37 @@ const CutterDashboard = () => {
     pending: 0,
     inProgress: 0,
     done: 0,
-    reassigned: {
-      total: 0,
-    },
+    reassigned: { total: 0 },
   });
 
   const badgeColors = {
-    pending: "bg-red-400",       // red
-    inProgress: "bg-yellow-300", // yellow
-    done: "bg-green-400",        // green
-    reassigned: "bg-purple-400", // purple
+    pending: "bg-red-400",
+    inProgress: "bg-yellow-300",
+    done: "bg-green-400",
+    reassigned: "bg-purple-400",
   };
 
   const fetchTaskCounts = async () => {
     try {
       const data = await getTasks();
+      const { pending = [], inProgress = [], completed = [], reassigned = [] } = data;
 
-      const allTasks = [
-        ...(data.pending || []),
-        ...(data.inProgress || []),
-        ...(data.completed || []),
-        ...(data.reassigned || []),
-      ];
+      // Merge all tasks
+      const allTasks = [...pending, ...inProgress, ...completed, ...reassigned];
 
       // Normal tasks (not reassigned)
       const normalTasks = allTasks.filter((t) => !t.wasReassigned);
-      const pendingCount = normalTasks.filter((t) => t.status === "pending").length;
-      const inProgressCount = normalTasks.filter((t) => t.status === "in-progress").length;
-      const doneCount = normalTasks.filter((t) => t.status === "done").length;
+      const pendingCount = normalTasks.filter(
+        (t) => t.status?.toLowerCase() === "pending"
+      ).length;
+      const inProgressCount = normalTasks.filter(
+        (t) => t.status?.toLowerCase() === "in-progress"
+      ).length;
+      const doneCount = normalTasks.filter(
+        (t) =>
+          t.status?.toLowerCase() === "done" ||
+          t.status?.toLowerCase() === "completed"
+      ).length;
 
       // Reassigned tasks (only total count)
       const reassignedTasks = allTasks.filter((t) => t.wasReassigned);
@@ -42,9 +45,7 @@ const CutterDashboard = () => {
         pending: pendingCount,
         inProgress: inProgressCount,
         done: doneCount,
-        reassigned: {
-          total: reassignedTasks.length,
-        },
+        reassigned: { total: reassignedTasks.length },
       });
     } catch (err) {
       console.error("Error fetching tasks:", err);
@@ -53,6 +54,8 @@ const CutterDashboard = () => {
 
   useEffect(() => {
     fetchTaskCounts();
+    const interval = setInterval(fetchTaskCounts, 30000); // refresh every 30s
+    return () => clearInterval(interval);
   }, []);
 
   const boxData = [
@@ -64,13 +67,11 @@ const CutterDashboard = () => {
 
   return (
     <div className="p-6">
-      {/* ✅ Title */}
       <h1 className="text-3xl sm:text-4xl font-bold text-gray-700 mb-8">
         Dashboard Overview
       </h1>
 
-      {/* ✅ Task Summary Boxes */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
         {boxData.map((box) => (
           <div
             key={box.label}
@@ -79,9 +80,7 @@ const CutterDashboard = () => {
             <h2 className="text-lg sm:text-xl font-semibold text-center min-h-[3rem] flex items-center justify-center">
               {box.label}
             </h2>
-            <p className="mt-3 text-2xl sm:text-3xl font-bold text-center">
-              {box.count}
-            </p>
+            <p className="mt-3 text-2xl sm:text-3xl font-bold text-center">{box.count}</p>
           </div>
         ))}
       </div>
