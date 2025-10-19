@@ -1,53 +1,58 @@
 import React, { useState, useEffect, useRef } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import {
-  BarChart3,
-  FileText,
-  Clock,
-  CheckCircle,
-  Menu,
-  X,
-} from "lucide-react";
-// import { getTasks } from "../../api/handworker"; // Uncomment when you have the API
-import LogoutButton from "../../component/LogoutButton";
+import { BarChart3, ClipboardList, Clock, CheckCircle, Menu, X } from "lucide-react";
+import { getTasks } from "../../api/handworker";
 import logo from "../../assets/logo.png";
+import LogoutButton from "../../component/LogoutButton";
 
 const HandworkerSidebar = () => {
   const location = useLocation();
   const sidebarRef = useRef(null);
-  const [taskCounts, setTaskCounts] = useState({
-    new: 0,
-    inProgress: 0,
-    completed: 0,
+  const [open, setOpen] = useState(false);
+
+  const [tasks, setTasks] = useState({
+    pending: [],
+    inProgress: [],
+    completed: [],
+    reassigned: [],
   });
-  const [isOpen, setIsOpen] = useState(false);
 
-  const badgeColors = {
-    new: "bg-blue-500",
-    inProgress: "bg-yellow-400",
-    completed: "bg-green-500",
-  };
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
-  const fetchTaskCounts = async () => {
+  // Update isMobile on window resize
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Fetch tasks and keep only unique orderNo
+  const fetchTasks = async () => {
     try {
-      // Uncomment when you have the API endpoint
-      // const data = await getTasks();
-      // const allTasks = [
-      //   ...(data.newTasks || []),
-      //   ...(data.inProgress || []),
-      //   ...(data.completed || []),
-      // ];
-      // setTaskCounts({
-      //   new: allTasks.filter((t) => t.status === "new").length,
-      //   inProgress: allTasks.filter((t) => t.status === "in-progress").length,
-      //   completed: allTasks.filter((t) => t.status === "completed").length,
-      // });
+      const data = await getTasks();
 
-      // Mock data for now - replace with actual API call
-      setTaskCounts({
-        new: 5,
-        inProgress: 3,
-        completed: 12,
+      const uniqueByOrder = (arr) => {
+        const seen = new Set();
+        return arr.filter((task) => {
+          const orderNo = task?.order?.orderNo;
+          if (!orderNo) return false;
+          if (seen.has(orderNo)) return false;
+          seen.add(orderNo);
+          return true;
+        });
+      };
+
+      // Include "done" status from completed tasks
+      const completedTasks = (data.completed || []).map((t) => ({
+        ...t,
+        status: t.status || "done",
+      }));
+
+      setTasks({
+        pending: uniqueByOrder(data.pending || []),
+        inProgress: uniqueByOrder(data.inProgress || []),
+        completed: uniqueByOrder(completedTasks),
+        reassigned: uniqueByOrder(data.reassigned || []),
       });
     } catch (err) {
       console.error("Error fetching tasks:", err);
@@ -55,145 +60,116 @@ const HandworkerSidebar = () => {
   };
 
   useEffect(() => {
-    fetchTaskCounts();
-  }, []);
-
-  useEffect(() => {
-    // Reset badge counts when visiting respective pages
-    if (location.pathname === "/handworker/newtasks")
-      setTaskCounts((prev) => ({ ...prev, new: 0 }));
-    else if (location.pathname === "/handworker/inprogresstasks")
-      setTaskCounts((prev) => ({ ...prev, inProgress: 0 }));
-    else if (location.pathname === "/handworker/completedtasks")
-      setTaskCounts((prev) => ({ ...prev, completed: 0 }));
-  }, [location.pathname]);
-
-  useEffect(() => {
-    const handleOutsideClick = (e) => {
-      if (window.innerWidth >= 1024) return;
-      if (sidebarRef.current && !sidebarRef.current.contains(e.target)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleOutsideClick);
-    return () => document.removeEventListener("mousedown", handleOutsideClick);
+    fetchTasks();
+    const interval = setInterval(fetchTasks, 30000); // refresh every 30s
+    return () => clearInterval(interval);
   }, []);
 
   const menuItems = [
     { icon: BarChart3, label: "Dashboard", path: "/handworker/dashboard" },
-    {
-      icon: FileText,
-      label: "Tasks",
-      path: "/handworker/tasks",
-      count: taskCounts.new,
-      color: badgeColors.new,
-    },
-    {
-      icon: Clock,
-      label: "In-Progress",
-      path: "/handworker/inprogresstasks",
-      count: taskCounts.inProgress,
-      color: badgeColors.inProgress,
-    },
-    {
-      icon: CheckCircle,
-      label: "Completed",
-      path: "/handworker/completedtasks",
-      count: taskCounts.completed,
-      color: badgeColors.completed,
-    },
+    { icon: ClipboardList, label: "Assigned Tasks", path: "/handworker/newtasks", count: tasks.pending.length },
+    { icon: Clock, label: "In Progress", path: "/handworker/inprogresstasks", count: tasks.inProgress.length },
+    { icon: CheckCircle, label: "Completed", path: "/handworker/completedtasks", count: tasks.completed.length },
+    { icon: ClipboardList, label: "Reassigned", path: "/handworker/reassigntasks", count: tasks.reassigned.length },
   ];
 
   return (
     <>
-      {/* Mobile toggle button */}
-      <div className="lg:hidden border-b flex items-center">
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="lg:hidden fixed top-4 left-2 z-50 p-2 rounded-md"
-        >
-          {isOpen ? <X className="w-6 h-6 " /> : <Menu className="w-7 h-7" />}
-        </button>
-      </div>
+      {/* Overlay for mobile */}
+      {isMobile && open && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-20 z-40"
+          onClick={() => setOpen(false)}
+        />
+      )}
 
       {/* Sidebar */}
-      <div
+      <aside
         ref={sidebarRef}
-        className={`fixed lg:static top-0 left-0 h-full bg-gradient-to-br from-pink-50 via-pink-100 to-purple-50 border-r border-pink-200/40 w-64 transform
-          ${isOpen ? "translate-x-0" : "-translate-x-full"}
-          lg:translate-x-0 transition-transform duration-300 z-50
-          flex flex-col justify-between shadow-lg`}
+        className={`
+          fixed inset-y-0 left-0 flex flex-col justify-between shadow-lg h-screen
+          w-56 sm:w-60 md:w-72 lg:w-80
+          ${isMobile ? "bg-gradient-to-br from-pink-50 via-pink-100 to-purple-50" : "bg-gradient-to-r from-pink-50 via-purple-50 to-purple-100"}
+          border-r border-pink-200/40
+          transform transition-transform duration-300 z-50
+          ${isMobile ? (open ? "translate-x-0" : "-translate-x-full") : "translate-x-0 md:static md:block"}
+        `}
       >
-        <div>
-          {/* Logo for Desktop */}
-          <div className="hidden lg:block p-4 flex ml-8 justify-center">
-            <img
-              src={logo}
-              alt="Her Hiness Logo"
-              className="hidden lg:block w-80 h-32 object-cover rounded"
-            />
+        <div className="flex flex-col h-full justify-between">
+          <div>
+            {/* Logo + Close Button */}
+            <div className="flex items-center justify-between md:px-10 relative">
+              <img
+                src={logo}
+                alt="Logo"
+                className="
+                  w-46 h-32 px-6 ml-6 m-4     
+                  lg:w-80 lg:h-52 lg:px-4 lg:-m-2 lg:pt-2 lg:ml-4
+                "
+              />
+              {isMobile && (
+                <button
+                  onClick={() => setOpen(false)}
+                  className="absolute top-4 right-4 bg-pink-600 hover:bg-pink-500 text-white p-2 rounded-full shadow-md"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+
+            {/* Navigation */}
+            <nav className="px-3 -mt-6 flex-1">
+              {menuItems.map(({ icon: Icon, label, path, count }) => (
+                <NavLink
+                  key={path}
+                  to={path}
+                  className={({ isActive }) =>
+                    `group flex items-center px-4 py-2 mb-2 text-sm md:text-base font-medium rounded-xl transition-all duration-300 transform hover:scale-105
+                    ${isActive
+                        ? "text-white bg-gradient-to-r from-pink-400 to-purple-400 shadow-md"
+                        : "text-gray-700 hover:text-white hover:bg-pink-200/50 hover:shadow-sm backdrop-blur-sm"
+                    }`
+                  }
+                  onClick={() => isMobile && setOpen(false)}
+                >
+                  {({ isActive }) => (
+                    <>
+                      <div
+                        className={`p-2 md:p-3 rounded-lg mr-3 transition-colors duration-300
+                          ${isActive ? "bg-white/20" : "bg-white/10 group-hover:bg-white/20"}`}
+                      >
+                        <Icon className={`w-4 h-4 md:w-5 md:h-5`} />
+                      </div>
+                      <span className="font-medium tracking-wide">{label}</span>
+
+                      {count !== undefined && count > 0 && (
+                        <span className="ml-auto bg-white/30 text-gray-800 text-xs md:text-sm font-semibold px-2 py-0.5 md:px-3 md:py-1 rounded-full">
+                          {count}
+                        </span>
+                      )}
+
+                      {isActive && <div className="ml-2 w-2 h-2 bg-white rounded-full opacity-80"></div>}
+                    </>
+                  )}
+                </NavLink>
+              ))}
+            </nav>
           </div>
 
-          {/* Logo for Mobile with Close Button */}
-          <div className="block lg:hidden flex ml-10 justify-center  border-pink-200/30 relative">
-            <img
-              src={logo}
-              alt="Her Hiness Logo"
-              className="block lg:hidden w-60 h-30 object-cover rounded"
-            />
-            {/* Close button (only for mobile) */}
-            <button
-              onClick={() => setIsOpen(false)}
-              className="lg:hidden absolute top-2 right-2 p-2 rounded-md hover:bg-pink-200/30"
-            >
-              <X className="w-6 h-6 text-gray-600" />
-            </button>
-          </div>
-
-          {/* Menu */}
-          <nav className="-mt-10 lg:-mt-12">
-            {menuItems.map(({ icon: Icon, label, path, count, color }) => (
-              <NavLink
-                key={path}
-                to={path}
-                className={({ isActive }) =>
-                  `flex items-center justify-between gap-3 mt-2 px-6 py-3 text-sm font-medium transition-all duration-300 rounded-lg mx-2 ${
-                    isActive
-                      ? "text-white bg-gradient-to-r from-pink-400 to-purple-400 shadow-md"
-                      : "text-gray-700 hover:text-white hover:bg-pink-200/50 hover:shadow-sm backdrop-blur-sm"
-                  }`
-                }
-                onClick={() => setIsOpen(false)}
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg transition-colors duration-300 ${
-                    location.pathname === path
-                      ? "bg-white/20"
-                      : "bg-white/10 group-hover:bg-white/20"
-                  }`}>
-                    <Icon className="w-4 h-4" />
-                  </div>
-                  <span className="font-medium tracking-wide">{label}</span>
-                </div>
-                {count > 0 && (
-                  <span
-                    className={`${color} text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-sm`}
-                  >
-                    {count}
-                  </span>
-                )}
-              </NavLink>
-            ))}
-          </nav>
-        </div>
-
-        {/* Logout button at the bottom */}
-        <div className="border-t border-pink-200/30 p-4">
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-pink-200/30 text-gray-700 hover:bg-white/20 transition-colors">
-            <LogoutButton className="flex items-center w-full text-sm font-medium hover:text-red-600 transition-colors" />
+          <div className="border-t p-4">
+            <LogoutButton className="flex items-center w-full px-6 py-3 text-sm font-medium text-gray-600 hover:text-red-600 hover:bg-red-50 transition-colors rounded-lg" />
           </div>
         </div>
-      </div>
+      </aside>
+
+      {isMobile && !open && (
+        <button
+          className="fixed top-4 left-4 z-50 p-2 bg-pink-600 text-white rounded-lg shadow-lg"
+          onClick={() => setOpen(true)}
+        >
+          <Menu className="h-6 w-6 md:h-7 md:w-7" />
+        </button>
+      )}
     </>
   );
 };

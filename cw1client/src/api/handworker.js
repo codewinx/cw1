@@ -4,7 +4,7 @@ import api from "./axios";
 export const getCurrentStaff = async () => {
   try {
     const token = localStorage.getItem("token"); // JWT token
-    const res = await api.get("/api/tailor/me", {
+    const res = await api.get("/api/handworker/me", {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -18,7 +18,7 @@ export const getCurrentStaff = async () => {
 
 export const updateStaff = async (id, data) => {
   const token = localStorage.getItem("token");
-  const res = await api.put(`/api/tailor/${id}`, data, {
+  const res = await api.put(`/api/handworker/${id}`, data, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -28,7 +28,7 @@ export const updateStaff = async (id, data) => {
 
 export const getTasks = async () => {
   const token = localStorage.getItem("token");
-  const res = await api.get("/api/tailor/gettailortasks", {
+  const res = await api.get("/api/handworker/gethandworkertasks", {
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -38,7 +38,7 @@ export const getTasks = async () => {
 
 export const updateProfile = async (id,formdata) => {
   const token = localStorage.getItem("token");
-  const res = await api.put(`/api/tailor/${id}`, formdata, {
+  const res = await api.put(`/api/handworker/${id}`, formdata, {
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "multipart/form-data",   // 👈 required
@@ -51,7 +51,7 @@ export const updateTaskStatus = async (taskId, status, remarks = "") => {
   const token = localStorage.getItem("token");
 
   const res = await api.put(
-    `/api/tailor/${taskId}`, // remove /status
+    `/api/handworker/${taskId}`, // remove /status
     { status, remarks },
     {
       headers: {

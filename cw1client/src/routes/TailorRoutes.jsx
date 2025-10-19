@@ -5,6 +5,7 @@ import TailorDashboard from "../pages/tailor/TailorDashboard";
 import AssignedTasks from "../pages/tailor/AssignedTasks";
 import InProgressTasks from "../pages/tailor/in-progress-tasks";
 import CompletedTasks from "../pages/tailor/completed-tasks";
+import TailorReasign from "../pages/tailor/TailorReasign";
 
 export default function TailorRoutes() {
   return (
@@ -16,6 +17,7 @@ export default function TailorRoutes() {
         <Route path="new-tasks" element={<AssignedTasks />} />
         <Route path="in-progress-tasks" element={<InProgressTasks />} />
         <Route path="completed-tasks" element={<CompletedTasks />} />
+        <Route path="reassigntasks" element={<TailorReasign />} />
         
 
 

@@ -8,7 +8,7 @@ export default function HandworkerLayout() {
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
-      <HandworkerSidebar open={true} setOpen={() => {}} /> {/* always open, no toggle */}
+      <HandworkerSidebar/> {/* always open, no toggle */}
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
