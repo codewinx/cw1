@@ -4,7 +4,7 @@ import {
   updateCustomer,
   deleteCustomer,
   getCustomerById,
-} from "../../api/customer";
+} from "../../api/admin+manager.js";
 import { Edit, Trash2, Eye, X, Search, User, Users, Filter } from "lucide-react";
 
 export default function AdminCustomers() {

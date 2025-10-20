@@ -25,7 +25,7 @@ router.post("/login", loginStaff);
 router.post(
   "/register",
   protect,
-  authorize("admin"),
+  authorize("admin", "Manager"),
   (req, res, next) => {
     uploadProfileImage(req, res, function (err) {
       if (err) return res.status(400).json({ message: err.message });
@@ -36,13 +36,13 @@ router.post(
 );
 
 // 📋 Get all staff (Admin only)
-router.get("/staff", protect, authorize("admin"), getAllStaff);
+router.get("/staff", protect, authorize("admin", "Manager"), getAllStaff);
 
 // ✏️ Update staff (Admin only, with profile image upload)
 router.put(
   "/staff/:id",
   protect,
-  authorize("admin"),
+  authorize("admin", "Manager"),
   (req, res, next) => {
     uploadProfileImage(req, res, function (err) {
       if (err) return res.status(400).json({ message: err.message });
@@ -53,13 +53,13 @@ router.put(
 );
 
 // ❌ Delete staff (Admin only)
-router.delete("/staff/:id", protect, authorize("admin"), deleteStaff);
+router.delete("/staff/:id", protect, authorize("admin", "Manager"), deleteStaff);
 
 // // GET /api/tasks/grouped
 // router.get("/grouped", protect, authorize("admin"), getTasksGroupedByStage);
 
 // GET /api/orders/stats
-router.get("/stats", protect, authorize("admin"), getOrderStats);
+router.get("/stats", protect, authorize("admin", "Manager"), getOrderStats);
 
 
 

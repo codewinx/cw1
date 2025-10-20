@@ -1,9 +1,9 @@
 import React, { useState } from "react";
-import { createCustomer } from "../../api/customer"; 
-import { createMeasurement } from "../../api/measurement"; // ✅ import API
+import { createCustomer } from "../../api/admin+manager.js"; 
+import { createMeasurement } from "../../api/admin+manager.js"; // ✅ import API
 import { PlusCircle, MinusCircle } from "lucide-react";
 
-const AdminAddCustomer = () => {
+const AdminManagerAddCustomer = () => {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -175,4 +175,4 @@ const AdminAddCustomer = () => {
   );
 };
 
-export default AdminAddCustomer;
+export default AdminManagerAddCustomer;

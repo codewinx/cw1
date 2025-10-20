@@ -14,12 +14,13 @@ import LogoutButton from "../../component/LogoutButton"; // 👈 import your log
 const ManagerSidebar = ({ closeSidebar }) => {
   const menuItems = [
     { icon: BarChart3, label: "Dashboard", path: "/manager/dashboard" },
-    { icon: Users, label: "Tasks", path: "/manager/task" },
+    { icon: Users, label: "Task Manager", path: "/manager/task" },
     { icon: ShoppingCart, label: "In-progress Tasks", path: "/manager/in-progress tasks" },
     { icon: Scissors, label: "Completed Tasks", path: "/manager/completedtasks" },
     { icon: Hand, label: "Reassign Tasks", path: "/manager/reassigntasks" },
-    { icon: Shirt, label: "Checking Tasks", path: "/manager/checkingtasks" },
+    { icon: Shirt, label: "Staff Manager", path: "/manager/staffmanager" },
     { icon: ListChecks, label: "Order Management", path: "/manager/ordermanagement" },
+    { icon: ListChecks, label: "Customers", path: "/manager/customers" },
   ];
 
   return (

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { getCategories, getServicesByCategory } from "../../api/service";
-import { createOrder } from "../../api/order";
+import { getCategories, getServicesByCategory } from "../../api/admin+manager.js";
+import { createOrder } from "../../api/admin+manager.js";
 
-const AdminAddOrder = ({ onClose }) => {
+const AdminManagerAddOrder = ({ onClose }) => {
   const [categories, setCategories] = useState([]);
   const [filteredServices, setFilteredServices] = useState([]);
   const [selectedService, setSelectedService] = useState(null);
@@ -424,4 +424,4 @@ const handleSubmit = async (e) => {
   );
 };
 
-export default AdminAddOrder;
+export default AdminManagerAddOrder;

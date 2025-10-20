@@ -4,7 +4,7 @@ import {
   createStaff,
   updateStaff,
   deleteStaff,
-} from "../../api/staff";
+} from "../../api/admin+manager.js";
 import { Edit, Trash2, Plus, X, Search, Eye } from "lucide-react";
 
 // Function to format Aadhar number for display
@@ -14,7 +14,7 @@ const formatAadharNumber = (number) => {
   return cleaned.replace(/(\d{4})(?=\d)/g, "$1 ");
 };
 
-const AdminStaffManagement = () => {
+const AdminManagerStaffManagement = () => {
   const [staffList, setStaffList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -659,4 +659,4 @@ const AdminStaffManagement = () => {
   );
 };
 
-export default AdminStaffManagement;
+export default AdminManagerStaffManagement;

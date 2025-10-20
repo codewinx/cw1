@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { getOrders, deleteOrder, updateOrder, getOrderById } from "../../api/order";
+import { getOrders, deleteOrder, updateOrder, getOrderById } from "../../api/admin+manager.js";
 import { Search, Eye, Edit, Trash2, X, Calendar } from "lucide-react";
 
-const AdminOrders = () => {
+const AdminManagerOrders = () => {
   const [orders, setOrders] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
@@ -315,4 +315,4 @@ const AdminOrders = () => {
   );
 };
 
-export default AdminOrders;
+export default AdminManagerOrders;

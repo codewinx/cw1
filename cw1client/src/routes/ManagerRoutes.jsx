@@ -2,13 +2,14 @@
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import ManagerLayout from "../pages/manager/ManagerLayout";
-import ManagerDashboard from "../pages/manager/ManagerDashboard";
-
-import ManagerTask from "../pages/manager/ManagerTask";
+import AdminManagerTask from "../pages/adminmanager/AdminManagerTask";
 import ManagerInprogressTasks from "../pages/manager/ManagerInprogressTasks";
 import ManagerCompletedTasks from "../pages/manager/ManagerCompletedTasks";
 import ManagerReassignTasks from "../pages/manager/ManagerReassignTasks";
-import ManagerOrderManagement from "../pages/manager/ManagerOrderManagement";
+import AdminManagerOrder from "../pages/adminmanager/AdminManagerOrder";
+import AdminManagerDashboard from "../pages/adminmanager/AdminManagerDashboard";
+import AdminManagerCustomers from "../pages/adminmanager/AdminManagerCustomers";
+import AdminManagerStaffManage from "../pages/adminmanager/AdminManagerStaffManage";
 
 export default function ManagerRoutes() {
   return (
@@ -18,12 +19,15 @@ export default function ManagerRoutes() {
         <Route index element={<Navigate to="dashboard" replace />} />
 
         {/* Child routes inside ManagerLayout */}
-        <Route path="dashboard" element={<ManagerDashboard />} />
-        <Route path="task" element={<ManagerTask />} />
+        <Route path="dashboard" element={<AdminManagerDashboard />} />
+        <Route path="task" element={<AdminManagerTask />} />
         <Route path="in-progress tasks" element={<ManagerInprogressTasks />} />
         <Route path="completedtasks" element={<ManagerCompletedTasks />} />
         <Route path="reassigntasks" element={<ManagerReassignTasks />} />
-        <Route path="ordermanagement" element={<ManagerOrderManagement />} />
+        <Route path="ordermanagement" element={<AdminManagerOrder />} />
+        <Route path="customers" element={<AdminManagerCustomers />} />
+        <Route path="staffmanager" element={<AdminManagerStaffManage />} />
+
        
       </Route>
     </Routes>

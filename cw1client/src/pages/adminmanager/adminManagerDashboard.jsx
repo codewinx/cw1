@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getOrders } from "../../api/order";
-import { fetchCustomers } from "../../api/customer";
-import { getAllTasks } from "../../api/task";
+import { getOrders,getAllTasks,fetchCustomers  } from "../../api/admin+manager.js";
 import {
   ShoppingCart,
   Users,
@@ -14,9 +12,9 @@ import {
   Activity,
   ClipboardList,
 } from "lucide-react";
-import AdminAddOrder from "./AdminAddOrder";
+import AdminManagerAddOrder from "./AdminManagerAddOrder.jsx";
 
-const AdminDashboard = () => {
+const AdminManagerDashboard = () => {
   const [stats, setStats] = useState({
     totalOrders: 0,
     activeCustomers: 0,
@@ -119,7 +117,7 @@ const AdminDashboard = () => {
               >
                 <X className="w-5 h-5" />
               </button>
-              <AdminAddOrder onClose={() => setShowAddOrder(false)} />
+              <AdminManagerAddOrder onClose={() => setShowAddOrder(false)} />
             </div>
           </div>
         )}
@@ -319,4 +317,4 @@ const WorkflowCard = ({ title, value, color }) => (
   </div>
 );
 
-export default AdminDashboard;
+export default AdminManagerDashboard;

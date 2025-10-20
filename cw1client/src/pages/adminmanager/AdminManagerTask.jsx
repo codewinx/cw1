@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { getAssignableStaff, assignTask, getOrdersWithItems } from "../../api/task";
+import { getAssignableStaff, assignTask, getOrdersWithItems } from "../../api/admin+manager.js";
 
 const STATUS_COLORS = {
   pending: "bg-yellow-100 text-yellow-800",
@@ -9,7 +9,7 @@ const STATUS_COLORS = {
   "Not Assigned": "bg-gray-100 text-gray-600"
 };
 
-const AdminTaskManager = () => {
+const AdminManagerTask = () => {
   const [ordersWithItems, setOrdersWithItems] = useState([]);
   const [assignableStaff, setAssignableStaff] = useState({});
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -343,4 +343,4 @@ const AdminTaskManager = () => {
   );
 };
 
-export default AdminTaskManager;
+export default AdminManagerTask;

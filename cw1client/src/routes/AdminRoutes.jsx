@@ -1,13 +1,13 @@
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import AdminLayout from "../pages/admin/AdminLayout";
-import AdminDashboard from "../pages/admin/AdminDashboard";
-import AdminCustomers from "../pages/admin/AdminCustomers";
-import AdminStaffManagement from "../pages/admin/AdminStaffManagement";
-import AdminOrders from "../pages/admin/AdminOrders";
+import AdminManagerDashboard from "../pages/adminmanager/AdminManagerDashboard";
+import AdminManagerCustomers from "../pages/adminmanager/AdminManagerCustomers";
+import AdminManagerStaffManage from "../pages/adminmanager/AdminManagerStaffManage";
+import AdminManagerOrder from "../pages/adminmanager/AdminManagerOrder";
 import AdminPayments from "../pages/admin/AdminPayments";
-import AdminTaskManager from "../pages/admin/AdminTaskManager";
-import AddCustomer from "../pages/admin/AdminAddCustomer"; // ✅ import
+import AdminManagerTask from "../pages/adminmanager/AdminManagerTask";
+import AdminManagerAddCustomer from "../pages/adminmanager/AdminManagerAddCustomer"; // ✅ import
 
 
 export default function AdminRoutes() {
@@ -18,14 +18,14 @@ export default function AdminRoutes() {
         <Route index element={<Navigate to="dashboard" replace />} />
 
         {/* All child routes stay inside AdminLayout */}
-        <Route path="dashboard" element={<AdminDashboard />} />
-        <Route path="customers" element={<AdminCustomers />} />
-               <Route path="admin/customers/add" element={<AddCustomer />} /> {/* ✅ */}
-        <Route path="staff" element={<AdminStaffManagement />} />
-        <Route path="orders" element={<AdminOrders />} />
-        <Route path="reports" element={<AdminOrders />} />
+        <Route path="dashboard" element={<AdminManagerDashboard />} />
+        <Route path="customers" element={<AdminManagerCustomers />} />
+        <Route path="admin/customers/add" element={<AdminManagerAddCustomer />} /> {/* ✅ */}
+        <Route path="staff" element={<AdminManagerStaffManage />} />
+        <Route path="orders" element={<AdminManagerOrder />} />
+        <Route path="reports" element={<AdminManagerOrder />} />
         <Route path="payments" element={<AdminPayments />} />
-        <Route path="tasks" element={<AdminTaskManager />} />
+        <Route path="tasks" element={<AdminManagerTask />} />
 
 
       </Route>
