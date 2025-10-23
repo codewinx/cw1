@@ -25,6 +25,7 @@ import {
   getCustomerById,
   updateCustomer,
   deleteCustomer,
+  searchCustomers
 } from "../controllers/adminManagerController.js";
 
 const router = express.Router();
@@ -62,5 +63,7 @@ router.get("/customers", getAllCustomers);
 router.get("/customers/:id", getCustomerById);
 router.put("/customers/:id", updateCustomer);
 router.delete("/customers/:id", deleteCustomer);
+// Route: /api/customers/search?query=123 or query=sur
+router.get("/search", searchCustomers);
 
 export default router;

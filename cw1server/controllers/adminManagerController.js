@@ -518,3 +518,23 @@ export const createService = async (req, res) => {
     res.status(500).json({ message: "Error creating service", error: err.message });
   }
 };
+
+// 🔍 Controller: Search existing customers by name or phone
+export const searchCustomers = async (req, res) => {
+  try {
+    const { query } = req.query;
+    if (!query) return res.json([]);
+
+    const regex = new RegExp(query, "i"); // case-insensitive
+    const customers = await Customer.find({
+      $or: [{ name: regex }, { phone: regex }],
+    })
+      .limit(10)
+      .sort({ name: 1 });
+
+    res.status(200).json(customers);
+  } catch (error) {
+    console.error("Error searching customers:", error);
+    res.status(500).json({ message: "Server Error" });
+  }
+};

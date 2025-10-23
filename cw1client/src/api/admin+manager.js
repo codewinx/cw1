@@ -269,3 +269,9 @@ export const deleteOrder = async (id) => {
   const res = await api.delete(`/api/admin-manager/orders/${id}`);
   return res.data;
 };
+
+// 🔍 Search customers API
+export const searchCustomer = async (query) => {
+  const res = await api.get(`/api/admin-manager/search?query=${query}`);
+  return res.data;
+};

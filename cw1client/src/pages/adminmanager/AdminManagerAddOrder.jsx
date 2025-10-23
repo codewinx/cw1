@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { getCategories, getServicesByCategory } from "../../api/admin+manager.js";
-import { createOrder } from "../../api/admin+manager.js";
+import { getCategories, getServicesByCategory, createOrder, searchCustomer } from "../../api/admin+manager.js";
 
 const AdminManagerAddOrder = ({ onClose }) => {
   const [categories, setCategories] = useState([]);
@@ -8,6 +7,11 @@ const AdminManagerAddOrder = ({ onClose }) => {
   const [selectedService, setSelectedService] = useState(null);
   const [previewImages, setPreviewImages] = useState({});
   const [showPreview, setShowPreview] = useState(null);
+  
+  // Customer search states
+  const [customerSearchResults, setCustomerSearchResults] = useState([]);
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
 
   const [formData, setFormData] = useState({
     customer: { name: "", email: "", phone: "", address: "", gender: "Male" },
@@ -57,6 +61,59 @@ const AdminManagerAddOrder = ({ onClose }) => {
     };
     fetchCats();
   }, []);
+
+  // Search customers function
+  const handleCustomerSearch = async (searchQuery) => {
+    if (!searchQuery || searchQuery.length < 2) {
+      setCustomerSearchResults([]);
+      setShowCustomerDropdown(false);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const customers = await searchCustomer(searchQuery);
+      setCustomerSearchResults(customers);
+      setShowCustomerDropdown(customers.length > 0);
+    } catch (err) {
+      console.error("Error searching customers:", err);
+      setCustomerSearchResults([]);
+      setShowCustomerDropdown(false);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Handle customer input change with debouncing
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const searchQuery = formData.customer.name.trim() || formData.customer.phone.trim();
+      if (searchQuery) {
+        handleCustomerSearch(searchQuery);
+      } else {
+        setCustomerSearchResults([]);
+        setShowCustomerDropdown(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [formData.customer.name, formData.customer.phone]);
+
+  // Select customer from dropdown
+  const handleCustomerSelect = (customer) => {
+    setFormData(prev => ({
+      ...prev,
+      customer: {
+        name: customer.name || "",
+        email: customer.email || "",
+        phone: customer.phone || "",
+        address: customer.address || "",
+        gender: customer.gender || "Male"
+      }
+    }));
+    setShowCustomerDropdown(false);
+    setCustomerSearchResults([]);
+  };
 
   // Category change
   const handleCategoryChange = async (e) => {
@@ -233,16 +290,102 @@ const AdminManagerAddOrder = ({ onClose }) => {
           {/* Customer */}
           <div className="border p-4 rounded-lg space-y-4">
             <h3 className="text-lg font-semibold">Customer Details</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <input name="name" placeholder="Name" className="input" onChange={handleCustomerChange} />
-              <input name="email" placeholder="Email" className="input" onChange={handleCustomerChange} />
-              <input name="phone" placeholder="Phone" className="input" onChange={handleCustomerChange} />
-              <input name="address" placeholder="Address" className="input" onChange={handleCustomerChange} />
-              <select name="gender" className="input col-span-2 sm:col-span-1" onChange={handleCustomerChange}>
-                <option>Male</option>
-                <option>Female</option>
-                <option>Other</option>
-              </select>
+            <div className="grid grid-cols-2 gap-4 relative">
+              {/* Name with dropdown */}
+              <div className="relative">
+                <label className="block text-sm font-medium mb-1">Name *</label>
+                <input 
+                  name="name" 
+                  placeholder="Enter customer name" 
+                  className="input w-full" 
+                  value={formData.customer.name}
+                  onChange={handleCustomerChange}
+                  autoComplete="off"
+                />
+                {showCustomerDropdown && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    {isSearching ? (
+                      <div className="p-2 text-center text-gray-500">Searching...</div>
+                    ) : (
+                      customerSearchResults.map((customer) => (
+                        <div
+                          key={customer._id}
+                          className="p-2 hover:bg-blue-50 cursor-pointer border-b border-gray-100"
+                          onClick={() => handleCustomerSelect(customer)}
+                        >
+                          <div className="font-medium">{customer.name}</div>
+                          <div className="text-sm text-gray-600">
+                            📞 {customer.phone} 
+                            {customer.email && ` • 📧 ${customer.email}`}
+                          </div>
+                          {customer.address && (
+                            <div className="text-xs text-gray-500 truncate">📍 {customer.address}</div>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Email */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Email</label>
+                <input 
+                  name="email" 
+                  placeholder="Email" 
+                  className="input w-full" 
+                  value={formData.customer.email}
+                  onChange={handleCustomerChange}
+                />
+              </div>
+
+              {/* Phone */}
+              <div className="relative">
+                <label className="block text-sm font-medium mb-1">Phone *</label>
+                <input 
+                  name="phone" 
+                  placeholder="Phone number" 
+                  className="input w-full" 
+                  value={formData.customer.phone}
+                  onChange={handleCustomerChange}
+                  autoComplete="off"
+                />
+              </div>
+
+              {/* Address */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Address</label>
+                <input 
+                  name="address" 
+                  placeholder="Address" 
+                  className="input w-full" 
+                  value={formData.customer.address}
+                  onChange={handleCustomerChange}
+                />
+              </div>
+
+              {/* Gender */}
+              <div className="col-span-2 sm:col-span-1">
+                <label className="block text-sm font-medium mb-1">Gender</label>
+                <select 
+                  name="gender" 
+                  className="input w-full" 
+                  value={formData.customer.gender}
+                  onChange={handleCustomerChange}
+                >
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              {/* Search Info */}
+              <div className="col-span-2">
+                <p className="text-xs text-gray-500 mt-2">
+                  💡 Start typing name or phone number to search existing customers
+                </p>
+              </div>
             </div>
           </div>
 
