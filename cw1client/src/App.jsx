@@ -50,7 +50,7 @@ export default function App() {
       {/* Manager routes */}
       <Route path="/manager/*" element={<ManagerRoutes />} />
     
-
+    
       {/* Handworker routes */}
       <Route path="/handworker/*" element={<HandworkerRoutes />} />
     </Routes>

@@ -31,7 +31,7 @@ const router = express.Router();
 
 // -------------------- ORDER ROUTES --------------------
 router.post("/orders", protect, authorize("admin", "Manager"), uploadDesign, createOrder);
-router.get("/orders", protect, authorize("admin", "Manager"), getOrders);
+router.get("/orders", protect, authorize("admin", "manager"), getOrders);
 router.get("/orders/:id", protect, authorize("admin", "Manager"), getOrderById);
 
 // -------------------- CATEGORY ROUTES --------------------

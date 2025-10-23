@@ -3,73 +3,75 @@ import api from "./axios";
 // 📌 Create a new order (with FormData)
 export const createOrder = async (orderData) => {
   try {
-    const response = await api.post("/api/order", orderData, {
+    // Make sure to use the correct endpoint - /api/orders (plural)
+    const response = await api.post("/api/admin-manager/orders", orderData, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
     });
-    return response.data; // { message, order }
+    return response.data; // { message, orders, summary }
   } catch (error) {
+    console.error("API Error:", error);
     throw error.response?.data || { message: "Error while creating order" };
   }
 };
 
 
-// 📌 Get all orders (optional filters: search, status)
-export const getOrders = async (params = {}) => {
-  try {
-    const query = new URLSearchParams(params).toString();
-    const response = await api.get(`/api/admin-manager${query ? `?${query}` : ""}`);
-    return response.data; // plain array of orders
-  } catch (error) {
-    throw error.response?.data || { message: "Error while fetching orders" };
-  }
-};
+// // 📌 Get all orders (optional filters: search, status)
+// export const getOrders = async (params = {}) => {
+//   try {
+//     const query = new URLSearchParams(params).toString();
+//     const response = await api.get(`/api/admin-manager${query ? `?${query}` : ""}`);
+//     return response.data; // plain array of orders
+//   } catch (error) {
+//     throw error.response?.data || { message: "Error while fetching orders" };
+//   }
+// };
 
-export const getOrderStats = async () => {
-  try {
-    const token = localStorage.getItem("token");
+// export const getOrderStats = async () => {
+//   try {
+//     const token = localStorage.getItem("token");
 
-    const res = await api.get("/api/auth/stats", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+//     const res = await api.get("/api/auth/stats", {
+//       headers: {
+//         Authorization: `Bearer ${token}`,
+//       },
+//     });
 
-    return res.data; // { success: true, data: {...} }
-  } catch (err) {
-    throw err.response?.data || { message: "Error fetching order stats" };
-  }
-};
-// 📌 Get single order by ID
-export const getOrderById = async (orderId) => {
-  try {
-    const response = await api.get(`/api/order/${orderId}`);
-    return response.data; // plain order object
-  } catch (error) {
-    throw error.response?.data || { message: "Error while fetching order" };
-  }
-};
+//     return res.data; // { success: true, data: {...} }
+//   } catch (err) {
+//     throw err.response?.data || { message: "Error fetching order stats" };
+//   }
+// };
+// // 📌 Get single order by ID
+// export const getOrderById = async (orderId) => {
+//   try {
+//     const response = await api.get(`/api/order/${orderId}`);
+//     return response.data; // plain order object
+//   } catch (error) {
+//     throw error.response?.data || { message: "Error while fetching order" };
+//   }
+// };
 
-// 📌 Update an order
-export const updateOrder = async (orderId, updatedData) => {
-  try {
-    const response = await api.put(`/api/order/${orderId}`, updatedData);
-    return response.data; // updated order
-  } catch (error) {
-    throw error.response?.data || { message: "Error while updating order" };
-  }
-};
+// // 📌 Update an order
+// export const updateOrder = async (orderId, updatedData) => {
+//   try {
+//     const response = await api.put(`/api/order/${orderId}`, updatedData);
+//     return response.data; // updated order
+//   } catch (error) {
+//     throw error.response?.data || { message: "Error while updating order" };
+//   }
+// };
 
-// 📌 Delete an order
-export const deleteOrder = async (orderId) => {
-  try {
-    const response = await api.delete(`/api/order/${orderId}`);
-    return response.data; // { message: "Order deleted" }
-  } catch (error) {
-    throw error.response?.data || { message: "Error while deleting order" };
-  }
-};
+// // 📌 Delete an order
+// export const deleteOrder = async (orderId) => {
+//   try {
+//     const response = await api.delete(`/api/order/${orderId}`);
+//     return response.data; // { message: "Order deleted" }
+//   } catch (error) {
+//     throw error.response?.data || { message: "Error while deleting order" };
+//   }
+// };
 
 // ✅ Create a new customer
 export const createCustomer = async (customerData) => {
@@ -238,5 +240,32 @@ export const getAssignableStaff = async (serviceId) => {
 // Get orders with items
 export const getOrdersWithItems = async () => {
   const res = await api.get("/api/admin-manager/orders-with-items");
+  return res.data;
+};
+
+
+// Common Order APIs
+
+export const getOrders = async (params = {}) => {
+  const query = new URLSearchParams(params).toString();
+  const res = await api.get(`/api/admin-manager/orders${query ? `?${query}` : ""}`);
+  return res.data;
+};
+
+// Fetch single order by ID
+export const getOrderById = async (id) => {
+  const res = await api.get(`/api/admin-manager/orders/${id}`);
+  return res.data;
+};
+
+// Update order
+export const updateOrder = async (id, data) => {
+  const res = await api.put(`/api/admin-manager/orders/${id}`, data);
+  return res.data;
+};
+
+// Delete order
+export const deleteOrder = async (id) => {
+  const res = await api.delete(`/api/admin-manager/orders/${id}`);
   return res.data;
 };

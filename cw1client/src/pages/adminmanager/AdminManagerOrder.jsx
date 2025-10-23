@@ -1,6 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { getOrders, deleteOrder, updateOrder, getOrderById } from "../../api/admin+manager.js";
+import {
+  getOrders,
+  deleteOrder,
+  updateOrder,
+  getOrderById,
+} from "../../api/admin+manager.js";
 import { Search, Eye, Edit, Trash2, X, Calendar } from "lucide-react";
+
+// ⚠️ Update this to match your backend URL
+const BACKEND_URL = "http://localhost:5000"; // Change this to your actual backend URL
 
 const AdminManagerOrders = () => {
   const [orders, setOrders] = useState([]);
@@ -26,7 +34,7 @@ const AdminManagerOrders = () => {
     status: "",
   });
 
-  // Fetch orders with filters
+  // Fetch orders
   const fetchOrders = async () => {
     setLoading(true);
     setError("");
@@ -53,7 +61,7 @@ const AdminManagerOrders = () => {
     return () => clearTimeout(handler);
   }, [search, statusFilter, startDate, endDate]);
 
-  // Delete
+  // Delete order
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this order?")) return;
     try {
@@ -64,14 +72,14 @@ const AdminManagerOrders = () => {
     }
   };
 
-  // Edit
+  // Edit order
   const handleEdit = (order) => {
     setEditOrder(order);
     setFormData({
-      category: order.category,
-      service: order.service,
-      totalAmount: order.totalAmount,
-      status: order.status,
+      category: order.category || order.service?.category || "",
+      service: order.service?.name || "",
+      totalAmount: order.payment?.totalAmount || order.totalAmount || 0,
+      status: order.status || "placed",
     });
     setIsModalOpen(true);
   };
@@ -87,10 +95,11 @@ const AdminManagerOrders = () => {
     }
   };
 
-  // View
+  // View order
   const handleView = async (id) => {
     try {
       const data = await getOrderById(id);
+      console.log("Order data:", data); // Debug log
       setViewOrder(data);
     } catch (err) {
       alert(err.message || "Error fetching order");
@@ -99,7 +108,9 @@ const AdminManagerOrders = () => {
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
-      <h1 className="text-2xl font-bold mb-6 text-gray-800">📦 Order Management</h1>
+      <h1 className="text-2xl font-bold mb-6 text-gray-800">
+        📦 Order Management
+      </h1>
 
       {/* Search + Filters */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -177,23 +188,30 @@ const AdminManagerOrders = () => {
                 orders.map((order) => (
                   <tr key={order._id} className="border-b">
                     <td className="px-4 py-3">{order.orderNo}</td>
-                    <td className="px-4 py-3">{order.customer?.name || "N/A"}</td>
-                    <td className="px-4 py-3">{order.category}</td>
-                    <td className="px-4 py-3">{order.service}</td>
-                    <td className="px-4 py-3">₹{order.totalAmount}</td>
+                    <td className="px-4 py-3">
+                      {order.customer?.name || "N/A"}
+                    </td>
+                    <td className="px-4 py-3">
+                      {order.category || order.service?.category || "N/A"}
+                    </td>
+                    <td className="px-4 py-3">
+                      {order.service?.name || "N/A"}
+                    </td>
+                    <td className="px-4 py-3">
+                      ₹{order.payment?.totalAmount || order.totalAmount || 0}
+                    </td>
                     <td className="px-4 py-3">
                       <span
-  className={`px-2 py-1 rounded text-xs font-semibold ${
-    order.status === "ready to delivery"
-      ? "bg-green-100 text-green-700"
-      : order.status === "placed"
-      ? "bg-yellow-100 text-yellow-700"
-      : "bg-blue-100 text-blue-700"
-  }`}
->
-  {order.status}
-</span>
-
+                        className={`px-2 py-1 rounded text-xs font-semibold ${
+                          order.status === "ready to delivery"
+                            ? "bg-green-100 text-green-700"
+                            : order.status === "placed"
+                            ? "bg-yellow-100 text-yellow-700"
+                            : "bg-blue-100 text-blue-700"
+                        }`}
+                      >
+                        {order.status}
+                      </span>
                     </td>
                     <td className="px-4 py-3 flex gap-2">
                       <button
@@ -219,7 +237,10 @@ const AdminManagerOrders = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="7" className="px-4 py-6 text-center text-gray-500">
+                  <td
+                    colSpan="7"
+                    className="px-4 py-6 text-center text-gray-500"
+                  >
                     No orders found.
                   </td>
                 </tr>
@@ -231,36 +252,144 @@ const AdminManagerOrders = () => {
 
       {/* View Modal */}
       {viewOrder && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg w-full max-w-md relative">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg w-full max-w-2xl relative max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => setViewOrder(null)}
-              className="absolute top-2 right-2 text-gray-500"
+              className="absolute top-2 right-2 text-gray-500 hover:text-red-600"
             >
               <X />
             </button>
-            <h2 className="text-lg font-bold mb-4">Order Details</h2>
-            <div className="space-y-2">
-              <p><strong>Order No:</strong> {viewOrder.orderNo}</p>
-              <p><strong>Customer:</strong> {viewOrder.customer?.name}</p>
-              <p><strong>Category:</strong> {viewOrder.category}</p>
-              <p><strong>Service:</strong> {viewOrder.service}</p>
-              <p><strong>Total Amount:</strong> ₹{viewOrder.totalAmount}</p>
-              <p><strong>Advance Amount:</strong> ₹{viewOrder.advanceAmount}</p>
-              <p><strong>Pending Amount:</strong> ₹{viewOrder.pendingAmount}</p>
-              <p><strong>Payment Method:</strong> {viewOrder.paymentMethod}</p>
-              <p><strong>Status:</strong> {viewOrder.status}</p>
-              <p><strong>Expected Date:</strong> {viewOrder.expectedDate ? new Date(viewOrder.expectedDate).toLocaleDateString() : "N/A"}</p>
-              <p><strong>Created On:</strong> {new Date(viewOrder.createdAt).toLocaleDateString()}</p>
-              <p><strong>Created By:</strong> {viewOrder.createdBy?.name || "N/A"}</p>
+            <h2 className="text-xl font-bold mb-4 text-center">📋 Order Details</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              {/* Order Information */}
+              <div className="space-y-2">
+                <h3 className="font-semibold text-lg mb-2 text-blue-600">Order Info</h3>
+                <p>
+                  <strong>Order No:</strong> {viewOrder.orderNo}
+                </p>
+                <p>
+                  <strong>Customer:</strong> {viewOrder.customer?.name || "N/A"}
+                </p>
+                <p>
+                  <strong>Phone:</strong> {viewOrder.customer?.phone || "N/A"}
+                </p>
+                <p>
+                  <strong>Category:</strong> {viewOrder.category || viewOrder.service?.category || "N/A"}
+                </p>
+                <p>
+                  <strong>Service:</strong> {viewOrder.service?.name || "N/A"}
+                </p>
+                <p>
+                  <strong>Status:</strong>{" "}
+                  <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                    viewOrder.status === "ready to delivery"
+                      ? "bg-green-100 text-green-700"
+                      : viewOrder.status === "placed"
+                      ? "bg-yellow-100 text-yellow-700"
+                      : "bg-blue-100 text-blue-700"
+                  }`}>
+                    {viewOrder.status}
+                  </span>
+                </p>
+              </div>
+
+              {/* Payment Information - FIXED */}
+              <div className="space-y-2">
+                <h3 className="font-semibold text-lg mb-2 text-green-600">Payment Info</h3>
+                <p>
+                  <strong>Total Amount:</strong> ₹{viewOrder.payment?.totalAmount || 0}
+                </p>
+                <p>
+                  <strong>Advance Amount:</strong> ₹{viewOrder.payment?.advanceAmount || 0}
+                </p>
+                <p>
+                  <strong>Extra Charges:</strong> ₹{viewOrder.payment?.extraCharges?.amount || 0}
+                  {viewOrder.payment?.extraCharges?.note && (
+                    <span className="text-xs text-gray-500 block">({viewOrder.payment.extraCharges.note})</span>
+                  )}
+                </p>
+                <p className="text-lg font-bold text-red-600">
+                  <strong>Pending Amount:</strong> ₹{
+                    (viewOrder.payment?.totalAmount || 0) + 
+                    (viewOrder.payment?.extraCharges?.amount || 0) - 
+                    (viewOrder.payment?.advanceAmount || 0)
+                  }
+                </p>
+                <p>
+                  <strong>Payment Method:</strong> {viewOrder.payment?.paymentMode || "N/A"}
+                </p>
+              </div>
+
+              {/* Dates */}
+              <div className="space-y-2">
+                <h3 className="font-semibold text-lg mb-2 text-purple-600">Dates</h3>
+                <p>
+                  <strong>Expected Date:</strong>{" "}
+                  {viewOrder.expectedDate
+                    ? new Date(viewOrder.expectedDate).toLocaleDateString()
+                    : "N/A"}
+                </p>
+                <p>
+                  <strong>Created On:</strong>{" "}
+                  {viewOrder.createdAt 
+                    ? new Date(viewOrder.createdAt).toLocaleDateString()
+                    : "N/A"}
+                </p>
+              </div>
+
+              {/* Measurements & Details */}
+              <div className="space-y-2">
+                <h3 className="font-semibold text-lg mb-2 text-orange-600">Item Details</h3>
+                <p>
+                  <strong>Color:</strong> {viewOrder.color || "N/A"}
+                </p>
+                <p>
+                  <strong>Raw Material:</strong>
+                  {viewOrder.rawMaterial?.cloth && " Cloth"}
+                  {viewOrder.rawMaterial?.lining && " Lining"}
+                  {!viewOrder.rawMaterial?.cloth && !viewOrder.rawMaterial?.lining && " N/A"}
+                </p>
+              </div>
             </div>
+
+            {/* Design Image - FIXED */}
+            {viewOrder.designImage && (
+              <div className="mt-4">
+                <h3 className="font-semibold text-lg mb-2">🎨 Design Image</h3>
+                <img 
+                  src={`${BACKEND_URL}${viewOrder.designImage}`}
+                  alt="Design" 
+                  className="w-full max-w-md mx-auto rounded border shadow-md"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = 'https://via.placeholder.com/400x300?text=Image+Not+Found';
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Measurements */}
+            {viewOrder.measurements && viewOrder.measurements.length > 0 && (
+              <div className="mt-4">
+                <h3 className="font-semibold text-lg mb-2">📏 Measurements</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+                  {viewOrder.measurements.map((m, idx) => (
+                    <div key={idx} className="bg-gray-50 p-2 rounded">
+                      <strong>{m.fieldName}:</strong> {m.value || "N/A"}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
 
       {/* Edit Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg w-full max-w-md relative">
             <button
               onClick={() => setIsModalOpen(false)}
@@ -273,26 +402,34 @@ const AdminManagerOrders = () => {
               type="text"
               placeholder="Category"
               value={formData.category}
-              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, category: e.target.value })
+              }
               className="border w-full p-2 rounded mb-2"
             />
             <input
               type="text"
               placeholder="Service"
               value={formData.service}
-              onChange={(e) => setFormData({ ...formData, service: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, service: e.target.value })
+              }
               className="border w-full p-2 rounded mb-2"
             />
             <input
               type="number"
               placeholder="Total Amount"
               value={formData.totalAmount}
-              onChange={(e) => setFormData({ ...formData, totalAmount: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, totalAmount: e.target.value })
+              }
               className="border w-full p-2 rounded mb-2"
             />
             <select
               value={formData.status}
-              onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, status: e.target.value })
+              }
               className="border w-full p-2 rounded mb-2"
             >
               <option value="placed">Placed</option>
@@ -300,7 +437,7 @@ const AdminManagerOrders = () => {
               <option value="handworking">Handworking</option>
               <option value="tailoring">Tailoring</option>
               <option value="quality-check">Quality Check</option>
-<option value="ready to delivery">Ready To Delivery</option>
+              <option value="ready to delivery">Ready To Delivery</option>
             </select>
             <button
               onClick={handleUpdate}

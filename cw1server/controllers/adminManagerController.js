@@ -333,20 +333,34 @@ async function getNextOrderNo() {
   return `ORD-${String(lastNo + 1).padStart(3, "0")}`;
 }
 
+
+// Helper function to get next order number
+// const getNextOrderNo = async () => {
+//   const lastOrder = await Order.findOne().sort({ createdAt: -1 });
+//   if (!lastOrder) return "ORD001";
+  
+//   const lastNo = parseInt(lastOrder.orderNo.replace(/\D/g, ""));
+//   return `ORD${String(lastNo + 1).padStart(3, "0")}`;
+// };
+
 export const createOrder = async (req, res) => {
   try {
     const customerData = JSON.parse(req.body.customer);
     const itemsData = JSON.parse(req.body.items || "[]");
-    const paymentData = JSON.parse(req.body.payment);
+    const paymentMode = req.body.paymentMode || "Cash";
 
+    // Find or create customer
     let existingCustomer = await Customer.findOne({ phone: customerData.phone });
     if (!existingCustomer) existingCustomer = await Customer.create(customerData);
 
-    const service = await Service.findOne({ _id: req.body.serviceId, category: req.body.category });
+    // Find service
+    const service = await Service.findOne({ 
+      _id: req.body.serviceId, 
+      category: req.body.category 
+    });
     if (!service) return res.status(404).json({ message: "Service not found" });
 
-    const paymentDoc = await Payment.create(paymentData);
-
+    // Process design files
     const designFiles = {};
     req.files?.forEach((file) => {
       const idx = file.fieldname.split("_")[1];
@@ -356,23 +370,50 @@ export const createOrder = async (req, res) => {
     const orders = [];
     const nextOrderNo = await getNextOrderNo();
 
+    // Create main order (first item)
+    const firstItem = itemsData[0];
+    const mainPaymentDoc = await Payment.create({
+      totalAmount: Number(firstItem.totalAmount) || 0,
+      advanceAmount: Number(firstItem.advanceAmount) || 0,
+      extraCharges: {
+        amount: Number(firstItem.extraCharges?.amount) || 0,
+        note: firstItem.extraCharges?.note || "",
+      },
+      paymentMode: paymentMode,
+      status: "Pending",
+    });
+
     const mainOrder = new Order({
       customer: existingCustomer._id,
       service: service._id,
-      measurements: itemsData[0]?.measurements || [],
+      measurements: firstItem.measurements || [],
       designImage: designFiles[0] || null,
-      color: itemsData[0]?.color || "",
-      rawMaterial: itemsData[0]?.rawMaterial,
+      color: firstItem.color || "",
+      rawMaterial: firstItem.rawMaterial,
       expectedDate: req.body.expectedDate,
-      payment: paymentDoc._id,
+      payment: mainPaymentDoc._id,
       orderNo: nextOrderNo,
       parentOrder: null,
     });
     await mainOrder.save();
     orders.push(mainOrder);
 
+    // Create sub-orders (remaining items)
     for (let i = 1; i < itemsData.length; i++) {
       const item = itemsData[i];
+      
+      // Create separate payment for each sub-order
+      const subPaymentDoc = await Payment.create({
+        totalAmount: Number(item.totalAmount) || 0,
+        advanceAmount: Number(item.advanceAmount) || 0,
+        extraCharges: {
+          amount: Number(item.extraCharges?.amount) || 0,
+          note: item.extraCharges?.note || "",
+        },
+        paymentMode: paymentMode,
+        status: "Pending",
+      });
+
       const subOrder = new Order({
         customer: existingCustomer._id,
         service: service._id,
@@ -381,7 +422,7 @@ export const createOrder = async (req, res) => {
         color: item.color || "",
         rawMaterial: item.rawMaterial,
         expectedDate: req.body.expectedDate,
-        payment: paymentDoc._id,
+        payment: subPaymentDoc._id,
         orderNo: `${nextOrderNo}/${i}`,
         parentOrder: mainOrder._id,
       });
@@ -389,13 +430,30 @@ export const createOrder = async (req, res) => {
       orders.push(subOrder);
     }
 
-    res.status(201).json({ message: "✅ Order(s) created successfully", orders });
+    // Calculate grand totals for response
+    const grandTotal = itemsData.reduce((sum, item) => {
+      return sum + (Number(item.totalAmount) || 0) + (Number(item.extraCharges?.amount) || 0);
+    }, 0);
+
+    const totalAdvance = itemsData.reduce((sum, item) => {
+      return sum + (Number(item.advanceAmount) || 0);
+    }, 0);
+
+    res.status(201).json({ 
+      message: "✅ Order(s) created successfully", 
+      orders,
+      summary: {
+        grandTotal,
+        totalAdvance,
+        remainingBalance: grandTotal - totalAdvance,
+        itemCount: itemsData.length,
+      }
+    });
   } catch (error) {
     console.error("❌ Error creating order:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
-
 // ------------------ ORDERS FETCH ------------------
 
 export const getOrders = async (req, res) => {
