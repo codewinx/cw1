@@ -15,6 +15,7 @@ import cutterRoutes from "./routes/cutterRoutes.js";
 import handworkerRoutes from "./routes/handworkerRoutes.js";
 import tailorRoutes from "./routes/tailorRoutes.js";
 import adminManagerRoutes from "./routes/adminManagerRoutes.js";
+import reportRoutes  from "./routes/reportRoutes.js";
 
 dotenv.config();
 connectDB();
@@ -51,7 +52,7 @@ app.use("/api/cutter", cutterRoutes);
 app.use("/api/handworker", handworkerRoutes);
 app.use("/api/tailor", tailorRoutes);
 app.use("/api/admin-manager", adminManagerRoutes);
-
+app.use("/api/reports", reportRoutes);
 // ✅ Default route
 app.get("/", (req, res) => {
   res.send("API is running...");
