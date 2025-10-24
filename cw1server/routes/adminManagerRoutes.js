@@ -30,6 +30,7 @@ import {
   addService,
   updateService,
   deleteService,
+  updateOrder
 } from "../controllers/adminManagerController.js";
 
 const router = express.Router();
@@ -38,6 +39,7 @@ const router = express.Router();
 router.post("/orders", protect, authorize("admin", "Manager"), uploadDesign, createOrder);
 router.get("/orders", protect, authorize("admin", "manager"), getOrders);
 router.get("/orders/:id", protect, authorize("admin", "Manager"), getOrderById);
+router.put("/orders/:id", protect, authorize("admin", "Manager"), updateOrder);
 
 // -------------------- CATEGORY ROUTES --------------------
 router.get("/categories", getCategories);

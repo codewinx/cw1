@@ -5,6 +5,7 @@ import Service from "../models/Service.js";
 import Staff from "../models/Staff.js";
 import Payment from "../models/Payment.js";
 import bcrypt from "bcryptjs";
+import mongoose from "mongoose";
 
 const categoryRoleMap = {
   Handworking: ["Cutter", "Handworker"],
@@ -455,6 +456,104 @@ export const createOrder = async (req, res) => {
   }
 };
 // ------------------ ORDERS FETCH ------------------
+export const updateOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    const order = await Order.findById(id).populate("payment");
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    if (updateData.category) order.category = updateData.category;
+
+    // ✅ Handle service ID or name
+    if (updateData.service) {
+      if (mongoose.Types.ObjectId.isValid(updateData.service)) {
+        order.service = updateData.service;
+      } else {
+        const serviceDoc = await Service.findOne({ name: updateData.service });
+        if (!serviceDoc) {
+          return res
+            .status(400)
+            .json({ message: `Service "${updateData.service}" not found` });
+        }
+        order.service = serviceDoc._id;
+      }
+    }
+
+    if (updateData.color) order.color = updateData.color;
+    if (updateData.expectedDate) order.expectedDate = updateData.expectedDate;
+
+    // ✅ Auto-correct status casing (e.g. "handworking" → "Handworking")
+    if (updateData.status) {
+      const formattedStatus = updateData.status
+        .trim()
+        .toLowerCase()
+        .replace(/\b\w/g, (char) => char.toUpperCase()); // Capitalize first letter of each word
+      order.status = formattedStatus;
+    }
+
+    if (updateData.rawMaterial) {
+      order.rawMaterial = {
+        cloth: updateData.rawMaterial.cloth || false,
+        lining: updateData.rawMaterial.lining || false,
+      };
+    }
+
+    if (updateData.measurements && Array.isArray(updateData.measurements)) {
+      order.measurements = updateData.measurements;
+    }
+
+    // ✅ Payment update logic
+    if (updateData.payment && order.payment) {
+      const payment = await Payment.findById(order.payment);
+      if (payment) {
+        payment.totalAmount =
+          updateData.payment.totalAmount ?? payment.totalAmount;
+        payment.advanceAmount =
+          updateData.payment.advanceAmount ?? payment.advanceAmount;
+
+        if (updateData.payment.extraCharges) {
+          payment.extraCharges = {
+            amount: updateData.payment.extraCharges.amount || 0,
+            note: updateData.payment.extraCharges.note || "",
+          };
+        }
+
+        const totalDue = payment.totalAmount + (payment.extraCharges?.amount || 0);
+        const totalPaid = payment.advanceAmount;
+
+        if (totalPaid >= totalDue) payment.status = "Completed";
+        else if (totalPaid > 0) payment.status = "Partial";
+        else payment.status = "Pending";
+
+        await payment.save();
+      }
+    }
+
+    await order.save();
+
+    const updatedOrder = await Order.findById(id)
+      .populate("customer")
+      .populate("service")
+      .populate("payment");
+
+    res.status(200).json({
+      success: true,
+      message: "Order updated successfully",
+      order: updatedOrder,
+    });
+  } catch (error) {
+    console.error("Error updating order:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error updating order",
+      error: error.message,
+    });
+  }
+};
 
 export const getOrders = async (req, res) => {
   try {

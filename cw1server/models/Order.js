@@ -47,6 +47,7 @@ const orderSchema = new mongoose.Schema(
         "Placed",
         "Cutting",
         "Handworking",
+        "Tailoring",
         "Stitching",
         "Quality Check",
         "Ready to Deliver",
