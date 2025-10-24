@@ -6,11 +6,13 @@ const serviceSchema = new mongoose.Schema({
     type: String, 
     required: true,
   }, 
-  category: {
+  category: [
+    {
     type: String,
     enum: ["Stitching", "Handworking", "Saree", "Altering"],
     required: true,
   },
+],
   measurements: [{ type: String }],
 });
 

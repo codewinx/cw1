@@ -538,3 +538,69 @@ export const searchCustomers = async (req, res) => {
     res.status(500).json({ message: "Server Error" });
   }
 };
+
+export const getServices = async (req, res) => {
+  try {
+    const services = await Service.find();
+    res.status(200).json(services);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching services", error });
+  }
+};
+
+// ✅ Add new service (multiple categories allowed)
+export const addService = async (req, res) => {
+  try {
+    const { name, category, measurements } = req.body;
+
+    if (!name || !category || category.length === 0) {
+      return res.status(400).json({ message: "Name and at least one category required" });
+    }
+
+    const newService = new Service({ name, category, measurements });
+    await newService.save();
+
+    res.status(201).json({ message: "Service added successfully", service: newService });
+  } catch (error) {
+    res.status(500).json({ message: "Error adding service", error });
+  }
+};
+
+// ✅ Update service
+export const updateService = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, category, measurements } = req.body;
+
+    const updatedService = await Service.findByIdAndUpdate(
+      id,
+      { name, category, measurements },
+      { new: true }
+    );
+
+    if (!updatedService) {
+      return res.status(404).json({ message: "Service not found" });
+    }
+
+    res.status(200).json({ message: "Service updated successfully", service: updatedService });
+  } catch (error) {
+    res.status(500).json({ message: "Error updating service", error });
+  }
+};
+
+// ✅ Delete service
+export const deleteService = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const deletedService = await Service.findByIdAndDelete(id);
+
+    if (!deletedService) {
+      return res.status(404).json({ message: "Service not found" });
+    }
+
+    res.status(200).json({ message: "Service deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Error deleting service", error });
+  }
+};

@@ -19,7 +19,7 @@ export default function AdminSidebar({ open, setOpen }) {
     { icon: Users, label: "Staff Management", path: "/admin/staff" },
     { icon: Users, label: "Customers", path: "/admin/customers" },
     { icon: ShoppingCart, label: "Orders", path: "/admin/orders" },
-    { icon: Package, label: "Inventory", path: "/admin/inventory" },
+    { icon: Package, label: "Service Control", path: "/admin/service-control" },
     { icon: ClipboardList, label: "Task Manager", path: "/admin/tasks" },
     { icon: DollarSign, label: "Payments", path: "/admin/payments" },
     { icon: FileText, label: "Reports", path: "/admin/reports" },

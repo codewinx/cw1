@@ -8,7 +8,7 @@ import AdminManagerOrder from "../pages/adminmanager/AdminManagerOrder";
 import AdminPayments from "../pages/admin/AdminPayments";
 import AdminManagerTask from "../pages/adminmanager/AdminManagerTask";
 import AdminManagerAddCustomer from "../pages/adminmanager/AdminManagerAddCustomer"; // ✅ import
-
+import AdminManagerServiceControl from "../pages/adminmanager/AdminManagerServiceControl";
 
 export default function AdminRoutes() {
   return (
@@ -26,6 +26,7 @@ export default function AdminRoutes() {
         <Route path="reports" element={<AdminManagerOrder />} />
         <Route path="payments" element={<AdminPayments />} />
         <Route path="tasks" element={<AdminManagerTask />} />
+        <Route path="service-control" element={<AdminManagerServiceControl />} />
 
 
       </Route>

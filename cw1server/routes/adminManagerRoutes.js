@@ -25,7 +25,11 @@ import {
   getCustomerById,
   updateCustomer,
   deleteCustomer,
-  searchCustomers
+  searchCustomers,
+  getServices,
+  addService,
+  updateService,
+  deleteService,
 } from "../controllers/adminManagerController.js";
 
 const router = express.Router();
@@ -65,5 +69,8 @@ router.put("/customers/:id", updateCustomer);
 router.delete("/customers/:id", deleteCustomer);
 // Route: /api/customers/search?query=123 or query=sur
 router.get("/search", searchCustomers);
-
+router.get("/services", protect, authorize("admin", "Manager"), getServices);
+router.post("/add-service", protect, authorize("admin", "Manager"), addService);
+router.put("/service/:id",protect, authorize("admin", "Manager"), updateService);
+router.delete("/service/:id",protect, authorize("admin", "Manager"), deleteService);
 export default router;
