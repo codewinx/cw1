@@ -219,18 +219,20 @@ const AdminManagerTask = () => {
     }
   };
 
-  const StatCard = ({ icon: Icon, title, value, subtitle, color }) => (
-    <div className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow">
-      <div className="flex items-center justify-between mb-4">
-        <div className={`p-3 rounded-lg ${color}`}>
-          <Icon className="w-6 h-6 text-white" />
-        </div>
+const StatCard = ({ icon: Icon, title, value, subtitle, color }) => (
+  <div className="bg-white p-4 rounded-xl shadow-md hover:shadow-lg transition-shadow flex items-center justify-between">
+    <div className="flex items-center gap-4">
+      <div className={`p-3 rounded-lg ${color}`}>
+        <Icon className="w-6 h-6 text-white" />
       </div>
-      <h3 className="text-gray-600 text-sm font-medium mb-1">{title}</h3>
-      <p className="text-2xl font-bold text-gray-800">{value}</p>
-      {subtitle && <p className="text-sm text-gray-500 mt-1">{subtitle}</p>}
+      <div>
+        <h3 className="text-gray-600 text-sm font-medium">{title}</h3>
+        <p className="text-2xl font-bold text-gray-800 mt-1">{value}</p>
+        {subtitle && <p className="text-xs text-gray-500 mt-1">{subtitle}</p>}
+      </div>
     </div>
-  );
+  </div>
+);
 
   const RoleAssignmentCard = ({ role, itemId = null, itemName = null, availableStaff = [] }) => {
     const currentTask = findTaskForRoleAndItem(role, itemId);
@@ -561,7 +563,6 @@ const AdminManagerTask = () => {
                     title="View Measurements"
                   >
                     <Eye className="w-4 h-4" />
-                    Measurements
                   </button>
                 </div>
 
@@ -584,7 +585,6 @@ const AdminManagerTask = () => {
                       title="View Measurements"
                     >
                       <Eye className="w-4 h-4" />
-                      Measurements
                     </button>
                   </div>
                 ))}
