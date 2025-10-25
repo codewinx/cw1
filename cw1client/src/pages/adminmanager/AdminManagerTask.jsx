@@ -84,24 +84,63 @@ const AdminManagerTask = () => {
   const findTaskForRoleAndItem = (role, itemId = null) => {
     if (!selectedOrder) return null;
     
-    // For main order tasks
+    // For main order tasks - only tasks without itemId
     if (!itemId) {
-      return selectedOrder.mainOrder.tasks?.find(t => t.stage === role && !t.itemId);
+      return selectedOrder.mainOrder.tasks?.find(t => 
+        t.stage === role && !t.itemId
+      );
     }
     
-    // For item tasks - check both main order tasks with itemId and item's own tasks
+    // For item tasks - check both main order's item tasks and item's own tasks
+    const item = selectedOrder.items.find(i => i._id === itemId);
+    
+    // First check if the item has its own tasks array
+    if (item?.tasks) {
+      const itemTask = item.tasks.find(t => t.stage === role);
+      if (itemTask) return itemTask;
+    }
+    
+    // Then check main order tasks that reference this item
     const mainOrderTaskWithItem = selectedOrder.mainOrder.tasks?.find(
       t => t.stage === role && t.itemId && t.itemId.toString() === itemId.toString()
     );
     
-    if (mainOrderTaskWithItem) return mainOrderTaskWithItem;
-    
-    // Check if the item has its own tasks
-    const item = selectedOrder.items.find(i => i._id === itemId);
-    const itemTask = item?.tasks?.find(t => t.stage === role);
-    
-    return itemTask || null;
+    return mainOrderTaskWithItem || null;
   };
+
+  // Calculate task statistics
+  const calculateTaskStats = () => {
+    let pendingTasks = 0;
+    let inProgressTasks = 0;
+    let completedTasks = 0;
+    let totalTasks = 0;
+
+    ordersWithItems.forEach(orderGroup => {
+      // Count tasks from main order
+      const mainTasks = orderGroup.mainOrder.tasks || [];
+      mainTasks.forEach(task => {
+        totalTasks++;
+        if (task.status === 'pending') pendingTasks++;
+        else if (task.status === 'in-progress') inProgressTasks++;
+        else if (task.status === 'done') completedTasks++;
+      });
+
+      // Count tasks from items
+      orderGroup.items.forEach(item => {
+        const itemTasks = item.tasks || [];
+        itemTasks.forEach(task => {
+          totalTasks++;
+          if (task.status === 'pending') pendingTasks++;
+          else if (task.status === 'in-progress') inProgressTasks++;
+          else if (task.status === 'done') completedTasks++;
+        });
+      });
+    });
+
+    return { pendingTasks, inProgressTasks, completedTasks, totalTasks };
+  };
+
+  const { pendingTasks, inProgressTasks, completedTasks, totalTasks } = calculateTaskStats();
 
   const filteredOrders = ordersWithItems.filter(orderGroup => {
     const order = orderGroup.mainOrder;
@@ -122,21 +161,30 @@ const AdminManagerTask = () => {
       return;
     }
 
-    // Use main order ID for the API, but pass itemId separately
-    const mainOrderId = selectedOrder?.mainOrder?._id;
-    if (!mainOrderId) {
+    // FIXED: Use the correct order ID based on whether it's for an item or main order
+    let targetOrderId;
+    if (itemId) {
+      // For item tasks, find the item's order ID
+      const item = selectedOrder.items.find(i => i._id === itemId);
+      targetOrderId = item?._id; // Use the item's order ID
+    } else {
+      // For main order tasks, use main order ID
+      targetOrderId = selectedOrder?.mainOrder?._id;
+    }
+
+    if (!targetOrderId) {
       showMessage("error", "No order selected.");
       return;
     }
 
     try {
       const taskData = {
-        orderId: mainOrderId, // Always use main order ID
+        orderId: targetOrderId, // FIXED: Use the correct order ID
         stage: role,
         staffId: workerData.staffId,
         deadline: workerData.deadline || null,
         remarks: `Assigned for ${itemId ? 'Item' : 'Main Order'}`,
-        itemId: itemId || null // Pass itemId separately
+        itemId: itemId || null
       };
 
       const result = await assignTask(taskData);
@@ -323,28 +371,25 @@ const AdminManagerTask = () => {
             icon={Users}
             title="Total Orders"
             value={filteredOrders.length}
+            subtitle={`${totalTasks} total tasks`}
             color="bg-blue-500"
           />
           <StatCard
             icon={Briefcase}
             title="Pending Tasks"
-            value={filteredOrders.filter(order => order.mainOrder.status === 'Placed').length}
+            value={pendingTasks}
             color="bg-orange-500"
           />
           <StatCard
             icon={CheckCircle}
-            title="In Progress"
-            value={filteredOrders.filter(order => 
-              ['Cutting', 'Handworking', 'Stitching'].includes(order.mainOrder.status)
-            ).length}
+            title="In Progress Tasks"
+            value={inProgressTasks}
             color="bg-purple-500"
           />
           <StatCard
             icon={Award}
-            title="Completed"
-            value={filteredOrders.filter(order => 
-              ['Quality Check', 'Ready to Deliver', 'Delivered'].includes(order.mainOrder.status)
-            ).length}
+            title="Completed Tasks"
+            value={completedTasks}
             color="bg-green-500"
           />
         </div>
@@ -516,7 +561,7 @@ const AdminManagerTask = () => {
                     title="View Measurements"
                   >
                     <Eye className="w-4 h-4" />
-                  
+                    Measurements
                   </button>
                 </div>
 
@@ -539,7 +584,7 @@ const AdminManagerTask = () => {
                       title="View Measurements"
                     >
                       <Eye className="w-4 h-4" />
-                     
+                      Measurements
                     </button>
                   </div>
                 ))}

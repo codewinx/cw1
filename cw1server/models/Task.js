@@ -1,4 +1,3 @@
-// models/Task.js
 const mongoose = require("mongoose");
 
 const taskSchema = new mongoose.Schema(
@@ -22,6 +21,7 @@ const taskSchema = new mongoose.Schema(
     completedAt: Date,
     isReassigned: { type: Boolean, default: false },
     wasReassigned: { type: Boolean, default: false },
+    itemId: { type: mongoose.Schema.Types.ObjectId, default: null }, // Add this field for item tasks
     history: [
       {
         action: String,
@@ -34,11 +34,12 @@ const taskSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-// ✅ Map Task.stage → Order.status
+
+// ✅ CORRECTED: Map Task.stage → Order.status using valid enum values
 const stageToOrderStatus = {
   Cutter: "Cutting",
   Handworker: "Handworking",
-  Tailor: "Stitching",
+  Tailor: "Tailoring", // Changed from "Stitching" to "Tailoring"
   Manager: "Quality Check",
   admin: "Quality Check",
 };
@@ -47,34 +48,18 @@ const stageToOrderStatus = {
 taskSchema.post("save", async function (doc) {
   try {
     const Order = mongoose.model("Order");
-    const Task = mongoose.model("Task");
-
-    const order = await Order.findById(doc.order).populate("tasks");
+    const order = await Order.findById(doc.order);
     if (!order) return;
 
-    // 🔎 Get latest task statuses grouped by stage
-    const latestByStage = {};
-    for (const t of order.tasks) {
-      if (!latestByStage[t.stage] || t.updatedAt > latestByStage[t.stage].updatedAt) {
-        latestByStage[t.stage] = t;
-      }
+    // ✅ Use the correct status mapping
+    const newStatus = stageToOrderStatus[doc.stage];
+    if (newStatus && newStatus !== order.status) {
+      order.status = newStatus;
+      await order.save();
     }
-
-    // ✅ Check if all stages are done
-    const allStagesDone = ["Cutter", "Handworker", "Tailor"].every(
-      (stage) => latestByStage[stage] && latestByStage[stage].status === "done"
-    );
-
-    if (allStagesDone) {
-      order.status = "quality-check";
-    } else {
-      // Otherwise → use the current task's stage
-      order.status = stageToOrderStatus[doc.stage] || order.status;
-    }
-
-    await order.save();
   } catch (err) {
     console.error("Task post-save hook error:", err.message);
   }
 });
+
 module.exports = mongoose.model("Task", taskSchema);
