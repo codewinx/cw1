@@ -30,7 +30,10 @@ import {
   addService,
   updateService,
   deleteService,
-  updateOrder
+  updateOrder,
+  getAllPayments,
+  updatePayment,
+  deletePayment,
 } from "../controllers/adminManagerController.js";
 
 const router = express.Router();
@@ -75,4 +78,7 @@ router.get("/services", protect, authorize("admin", "Manager"), getServices);
 router.post("/add-service", protect, authorize("admin", "Manager"), addService);
 router.put("/service/:id",protect, authorize("admin", "Manager"), updateService);
 router.delete("/service/:id",protect, authorize("admin", "Manager"), deleteService);
+router.get("/payment-logs", protect, authorize("admin"), getAllPayments);         
+router.put("/payment/:id", protect, authorize("admin"), updatePayment);       
+router.delete("/payment/:id",protect, authorize("admin"), deletePayment); 
 export default router;

@@ -40,3 +40,20 @@ export const getOrderStats = async () => {
     throw err.response?.data || { message: "Error fetching order stats" };
   }
 };
+
+export const getPayments = async () => {
+  const response = await api.get('/api/admin-manager/payment-logs');
+  return response.data;
+};
+
+// ✅ Update a payment
+export const updatePayment = async (id, updatedData) => {
+  const response = await api.put(`/api/admin-manager/payment/${id}`, updatedData);
+  return response.data;
+};
+
+// ✅ Delete a payment
+export const deletePayment = async (id) => {
+  const response = await api.delete(`/api/admin-manager/payment/${id}`);
+  return response.data;
+};
