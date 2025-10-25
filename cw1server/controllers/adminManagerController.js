@@ -157,13 +157,36 @@ export const getAssignableStaff = async (req, res) => {
 
 export const getOrdersWithItems = async (req, res) => {
   try {
-    const mainOrders = await Order.find({ parentOrder: null }).populate("customer service tasks").lean();
+    const mainOrders = await Order.find({ parentOrder: null })
+      .populate("customer")
+      .populate("service")
+      .populate({
+        path: "tasks",
+        populate: [
+          { path: "assignedTo", select: "name role" },
+          { path: "assignedBy", select: "name" }
+        ]
+      })
+      .lean();
+
     const groupedOrders = await Promise.all(
       mainOrders.map(async (mainOrder) => {
-        const items = await Order.find({ parentOrder: mainOrder._id }).populate("customer service tasks").lean();
+        const items = await Order.find({ parentOrder: mainOrder._id })
+          .populate("customer")
+          .populate("service")
+          .populate({
+            path: "tasks",
+            populate: [
+              { path: "assignedTo", select: "name role" },
+              { path: "assignedBy", select: "name" }
+            ]
+          })
+          .lean();
+        
         return { mainOrder, items };
       })
     );
+    
     res.json(groupedOrders);
   } catch (err) {
     res.status(500).json({ message: "Error fetching orders", error: err.message });
@@ -172,7 +195,7 @@ export const getOrdersWithItems = async (req, res) => {
 
 // ------------------ TASKS ------------------
 
-export const assignTask = async (req, res) => {
+export const assignTaskController  = async (req, res) => {
   try {
     const { orderId, stage, staffId, deadline, remarks, itemId } = req.body;
     if (!staffId) return res.status(400).json({ message: "Please select a worker before assigning." });
