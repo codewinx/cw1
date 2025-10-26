@@ -157,13 +157,36 @@ export const getAssignableStaff = async (req, res) => {
 
 export const getOrdersWithItems = async (req, res) => {
   try {
-    const mainOrders = await Order.find({ parentOrder: null }).populate("customer service tasks").lean();
+    const mainOrders = await Order.find({ parentOrder: null })
+      .populate("customer")
+      .populate("service")
+      .populate({
+        path: "tasks",
+        populate: [
+          { path: "assignedTo", select: "name role" },
+          { path: "assignedBy", select: "name" }
+        ]
+      })
+      .lean();
+
     const groupedOrders = await Promise.all(
       mainOrders.map(async (mainOrder) => {
-        const items = await Order.find({ parentOrder: mainOrder._id }).populate("customer service tasks").lean();
+        const items = await Order.find({ parentOrder: mainOrder._id })
+          .populate("customer")
+          .populate("service")
+          .populate({
+            path: "tasks",
+            populate: [
+              { path: "assignedTo", select: "name role" },
+              { path: "assignedBy", select: "name" }
+            ]
+          })
+          .lean();
+        
         return { mainOrder, items };
       })
     );
+    
     res.json(groupedOrders);
   } catch (err) {
     res.status(500).json({ message: "Error fetching orders", error: err.message });
@@ -172,7 +195,7 @@ export const getOrdersWithItems = async (req, res) => {
 
 // ------------------ TASKS ------------------
 
-export const assignTask = async (req, res) => {
+export const assignTaskController = async (req, res) => {
   try {
     const { orderId, stage, staffId, deadline, remarks, itemId } = req.body;
     if (!staffId) return res.status(400).json({ message: "Please select a worker before assigning." });
@@ -187,16 +210,18 @@ export const assignTask = async (req, res) => {
       (t) => t.stage === stage && ((t.itemId && itemId && t.itemId.toString() === itemId) || (!t.itemId && !itemId))
     );
 
-    const updateOrderStatus = async (targetOrderId, newStatus) => {
-      if (!targetOrderId) return;
-      await Order.findByIdAndUpdate(targetOrderId, { status: newStatus });
-    };
+    // ✅ REMOVED: Manual status update - let the Task schema hook handle it
 
     if (existingTask) {
       const oldTask = await Task.findById(existingTask._id);
       oldTask.status = "reassigned";
       oldTask.wasReassigned = true;
-      oldTask.history.push({ action: "reassigned", by: req.user._id, to: staffId, note: remarks || "Reassigned to new staff" });
+      oldTask.history.push({ 
+        action: "reassigned", 
+        by: req.user._id, 
+        to: staffId, 
+        note: remarks || "Reassigned to new staff" 
+      });
       await oldTask.save();
 
       const newTask = await Task.create({
@@ -209,14 +234,23 @@ export const assignTask = async (req, res) => {
         itemId: itemId || null,
         isReassigned: true,
         status: "pending",
-        history: [{ action: "assigned (reassign)", by: req.user._id, to: staffId, note: remarks || "Reassigned task" }],
+        history: [{ 
+          action: "assigned (reassign)", 
+          by: req.user._id, 
+          to: staffId, 
+          note: remarks || "Reassigned task" 
+        }],
       });
 
       order.tasks.push(newTask._id);
       await order.save();
-      await updateOrderStatus(itemId || orderId, stage);
+      // ✅ No manual status update - Task hook will handle it
 
-      return res.json({ success: true, message: "Task reassigned successfully", task: newTask });
+      return res.json({ 
+        success: true, 
+        message: "Task reassigned successfully", 
+        task: newTask 
+      });
     } else {
       const newTask = await Task.create({
         order: orderId,
@@ -227,18 +261,30 @@ export const assignTask = async (req, res) => {
         remarks,
         itemId: itemId || null,
         status: "pending",
-        history: [{ action: "assigned", by: req.user._id, to: staffId, note: remarks || "First assignment" }],
+        history: [{ 
+          action: "assigned", 
+          by: req.user._id, 
+          to: staffId, 
+          note: remarks || "First assignment" 
+        }],
       });
 
       order.tasks.push(newTask._id);
       await order.save();
-      await updateOrderStatus(itemId || orderId, stage);
+      // ✅ No manual status update - Task hook will handle it
 
-      return res.status(201).json({ success: true, message: "Task assigned successfully", task: newTask });
+      return res.status(201).json({ 
+        success: true, 
+        message: "Task assigned successfully", 
+        task: newTask 
+      });
     }
   } catch (err) {
     console.error("Error assigning task:", err);
-    res.status(500).json({ message: "Server error", error: err.message });
+    res.status(500).json({ 
+      message: "Server error", 
+      error: err.message 
+    });
   }
 };
 
@@ -701,5 +747,56 @@ export const deleteService = async (req, res) => {
     res.status(200).json({ message: "Service deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: "Error deleting service", error });
+  }
+};
+
+export const getAllPayments = async (req, res) => {
+  try {
+    const payments = await Payment.find().sort({ createdAt: -1 });
+    res.status(200).json(payments);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching payments", error: error.message });
+  }
+};
+// export const getAllPayments = async (req, res) => {
+//   try {
+//     const payments = await Payment.find()
+//       .populate("order", "orderNo _id") // populate only orderNo and _id fields
+//       .sort({ createdAt: -1 });
+
+//     res.status(200).json(payments);
+//   } catch (err) {
+//     res.status(500).json({ message: err.message });
+//   }
+// };
+
+// ✅ Update a payment by ID
+export const updatePayment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updatedPayment = await Payment.findByIdAndUpdate(id, req.body, {
+      new: true,
+      runValidators: true,
+    });
+    if (!updatedPayment) {
+      return res.status(404).json({ message: "Payment not found" });
+    }
+    res.status(200).json({ message: "Payment updated successfully", payment: updatedPayment });
+  } catch (error) {
+    res.status(500).json({ message: "Error updating payment", error: error.message });
+  }
+};
+
+// ✅ Delete a payment by ID
+export const deletePayment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deletedPayment = await Payment.findByIdAndDelete(id);
+    if (!deletedPayment) {
+      return res.status(404).json({ message: "Payment not found" });
+    }
+    res.status(200).json({ message: "Payment deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Error deleting payment", error: error.message });
   }
 };

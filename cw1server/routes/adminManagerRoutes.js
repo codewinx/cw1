@@ -16,7 +16,7 @@ import {
   deleteStaff,
   getAssignableStaff,
   getOrdersWithItems,
-  assignTask,
+  assignTaskController ,
   getAllTasks,
   getTasksByStaff,
   updateTaskStatus,
@@ -30,7 +30,10 @@ import {
   addService,
   updateService,
   deleteService,
-  updateOrder
+  updateOrder,
+  getAllPayments,
+  updatePayment,
+  deletePayment,
 } from "../controllers/adminManagerController.js";
 
 const router = express.Router();
@@ -54,7 +57,7 @@ router.put("/staff/:id", protect, authorize("admin", "Manager"), updateStaff);
 router.delete("/staff/:id", protect, authorize("admin", "Manager"), deleteStaff);
 
 // -------------------- TASK ROUTES --------------------
-router.post("/tasks", protect, authorize("admin", "Manager"), assignTask);
+router.post("/assign-task", protect, authorize("admin", "Manager"), assignTaskController );
 router.get("/tasks", protect, authorize("admin", "Manager"), getAllTasks);
 router.get("/tasks/staff/:staffId", protect, authorize("admin", "Manager"), getTasksByStaff);
 router.put("/tasks/:taskId/status", protect, authorize("admin", "Manager"), updateTaskStatus);
@@ -75,4 +78,7 @@ router.get("/services", protect, authorize("admin", "Manager"), getServices);
 router.post("/add-service", protect, authorize("admin", "Manager"), addService);
 router.put("/service/:id",protect, authorize("admin", "Manager"), updateService);
 router.delete("/service/:id",protect, authorize("admin", "Manager"), deleteService);
+router.get("/payment-logs", protect, authorize("admin"), getAllPayments);         
+router.put("/payment/:id", protect, authorize("admin"), updatePayment);       
+router.delete("/payment/:id",protect, authorize("admin"), deletePayment); 
 export default router;

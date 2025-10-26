@@ -201,7 +201,7 @@
   export const deleteStaff = (id) => api.delete(`/api/staff/${id}`);
   // Create & assign a task
   export const assignTask = async (taskData) => {
-    const res = await api.post("/api/admin-manager", taskData);
+    const res = await api.post("/api/admin-manager/assign-task", taskData);
     return res.data;
   };
 
