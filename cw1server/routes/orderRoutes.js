@@ -5,8 +5,8 @@ import { protect, authorize } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-router.post("/", protect, authorize("admin", "manager"), uploadDesign, createOrder);
-router.get("/", protect, authorize("admin", "manager"), getOrders);
-router.get("/:id", protect, authorize("admin", "manager"), getOrderById);
+router.post("/", protect, authorize("admin", "Manager"), uploadDesign, createOrder);
+router.get("/", protect, authorize("admin", "Manager"), getOrders);
+router.get("/:id", protect, authorize("admin", "Manager"), getOrderById);
 
 export default router;

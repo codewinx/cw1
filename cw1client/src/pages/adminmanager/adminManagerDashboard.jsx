@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getOrders,getAllTasks,fetchCustomers  } from "../../api/admin+manager.js";
+// Ensure these imports are correct based on the file you provided
+import { getOrders, getAllTasks, fetchCustomers } from "../../api/admin+manager.js";
 import {
   ShoppingCart,
   Users,
@@ -11,8 +12,29 @@ import {
   X,
   Activity,
   ClipboardList,
+  Clock, // Added for pending tasks
 } from "lucide-react";
 import AdminManagerAddOrder from "./AdminManagerAddOrder.jsx";
+
+// --- Brand Color Configuration ---
+// Define a single primary color for consistency (e.g., a professional blue or deep purple)
+const PRIMARY_COLOR = "purple-600";
+const ACCENT_COLOR = "purple-100";
+const HOVER_COLOR = "purple-700";
+const BORDER_COLOR = "purple-200";
+
+// Simplified Workflow Card Component
+const WorkflowCard = ({ title, value, color }) => (
+  <div className="flex flex-col items-center p-3 flex-1 min-w-[80px] border border-gray-100 rounded-lg bg-white shadow-sm">
+    <div
+      className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold bg-${color} shadow-md mb-2`}
+    >
+      <span className="text-lg">{value}</span>
+    </div>
+    <p className="text-xs text-gray-600 font-medium text-center">{title}</p>
+  </div>
+);
+
 
 const AdminManagerDashboard = () => {
   const [stats, setStats] = useState({
@@ -38,60 +60,72 @@ const AdminManagerDashboard = () => {
 
   useEffect(() => {
     const fetchData = async () => {
+      let ordersRes = [];
+      let customers = [];
+      let tasks = { data: [] };
+
+      // 1. Fetch Orders (Most critical data)
       try {
-        const [ordersRes, customers, tasks] = await Promise.all([
-          getOrders(),
-          fetchCustomers(),
-          getAllTasks(),
-        ]);
-
-        setOrders(ordersRes);
-
-        // Calculate workflow counts based on order status
-        const newWorkflow = {
-          placed: 0,
-          cutting: 0,
-          handworking: 0,
-          tailoring: 0,
-          qualityCheck: 0,
-          readyToDeliver: 0,
-        };
-
-        ordersRes.forEach((order) => {
-          const status = order.status?.toLowerCase() || "";
-          if (status.includes("placed")) newWorkflow.placed++;
-          else if (status.includes("cutting") || status.includes("cutter"))
-            newWorkflow.cutting++;
-          else if (status.includes("handwork")) newWorkflow.handworking++;
-          else if (status.includes("tailor")) newWorkflow.tailoring++;
-          else if (status.includes("quality")) newWorkflow.qualityCheck++;
-          else if (status.includes("ready")) newWorkflow.readyToDeliver++;
-        });
-
-        setWorkflow(newWorkflow);
-
-        const tasksArray = tasks.data || tasks;
-        const pendingCount = Array.isArray(tasksArray)
-          ? tasksArray.filter(
-              (task) => task.status === "pending" || task.status === "Pending"
-            ).length
-          : 0;
-
-        const revenue = ordersRes
-          .filter((order) => order.status === "completed")
-          .reduce((sum, o) => sum + (o.totalAmount || 0), 0);
-
-        setStats({
-          totalOrders: ordersRes.length,
-          activeCustomers: Array.isArray(customers) ? customers.length : 0,
-          pendingTasks: pendingCount,
-          revenue: revenue,
-        });
+        ordersRes = await getOrders();
       } catch (err) {
-        console.error("Error fetching stats", err);
-      } finally {
-        setLoading(false);
+        console.error("Error fetching orders:", err);
+        // ordersRes remains [] on failure
       }
+
+      // 2. Fetch Customers
+      try {
+        customers = await fetchCustomers();
+      } catch (err) {
+        console.error("Error fetching customers:", err);
+        // customers remains [] on failure
+      }
+
+      // 3. Fetch Tasks
+      try {
+        tasks = await getAllTasks();
+      } catch (err) {
+        console.error("Error fetching tasks:", err);
+        // tasks remains { data: [] } on failure
+      }
+
+      // --- Post-Fetch Calculations ---
+
+      // Orders and Workflow
+      setOrders(ordersRes);
+      const newWorkflow = { placed: 0, cutting: 0, handworking: 0, tailoring: 0, qualityCheck: 0, readyToDeliver: 0 };
+      ordersRes.forEach((order) => {
+        const status = order.status?.toLowerCase() || "";
+        if (status.includes("placed")) newWorkflow.placed++;
+        else if (status.includes("cutting") || status.includes("cutter")) newWorkflow.cutting++;
+        else if (status.includes("handwork")) newWorkflow.handworking++;
+        else if (status.includes("tailor")) newWorkflow.tailoring++;
+        else if (status.includes("quality")) newWorkflow.qualityCheck++;
+        else if (status.includes("ready")) newWorkflow.readyToDeliver++;
+      });
+      setWorkflow(newWorkflow);
+
+      // Tasks
+      const tasksArray = tasks.data || tasks;
+      const pendingCount = Array.isArray(tasksArray)
+        ? tasksArray.filter(
+            (task) => task.status === "pending" || task.status === "Pending"
+          ).length
+        : 0;
+      
+      // Revenue (Assuming 'completed' status and 'totalAmount' field are correct)
+      const revenue = ordersRes
+        .filter((order) => (order.status?.toLowerCase() === "completed" || order.status?.toLowerCase() === "delivered"))
+        .reduce((sum, o) => sum + (o.payment?.totalAmount || 0), 0);
+        
+      // Update Stats
+      setStats({
+        totalOrders: ordersRes.length,
+        activeCustomers: Array.isArray(customers) ? customers.length : 0,
+        pendingTasks: pendingCount,
+        revenue: revenue,
+      });
+
+      setLoading(false);
     };
 
     fetchData();
@@ -99,20 +133,29 @@ const AdminManagerDashboard = () => {
 
   if (loading) {
     return (
-      <div className="h-screen bg-pink-50 p-4 flex items-center justify-center overflow-hidden">
+      <div className="h-screen bg-gray-50 p-6 flex items-center justify-center overflow-hidden">
         <p className="text-gray-600 text-lg">Loading dashboard...</p>
       </div>
     );
   }
 
+  // Helper for Status Badge styling
+  const getStatusStyle = (status) => {
+    const lowerStatus = status?.toLowerCase() || "";
+    if (lowerStatus.includes("ready") || lowerStatus.includes("completed")) return "bg-green-100 text-green-800";
+    if (lowerStatus.includes("quality") || lowerStatus.includes("placed")) return "bg-yellow-100 text-yellow-800";
+    return `bg-${ACCENT_COLOR} text-${PRIMARY_COLOR}`;
+  };
+
   return (
-    <div className="h-screen bg-pink-50 p-4 overflow-hidden">
-      <div className="max-w-7xl mx-auto h-full flex flex-col gap-4 overflow-hidden">
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto flex flex-col gap-6">
+        {/* Modal for Add Order */}
         {showAddOrder && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-md flex items-center justify-center z-50 p-4">
-            <div className="bg-white/95 rounded-2xl p-6 w-full max-w-md relative shadow-2xl border border-pink-200/50">
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl p-6 w-full max-w-lg relative shadow-2xl border border-gray-200">
               <button
-                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 p-2 rounded-xl hover:bg-pink-50 transition-all"
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 p-2 rounded-lg transition-all"
                 onClick={() => setShowAddOrder(false)}
               >
                 <X className="w-5 h-5" />
@@ -122,131 +165,146 @@ const AdminManagerDashboard = () => {
           </div>
         )}
 
-        <div className="text-center py-3">
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-pink-600 via-purple-600 to-pink-700 bg-clip-text text-transparent mb-2">
-            Dashboard
+        {/* --- Header --- */}
+        <div className="py-2 border-b border-gray-200">
+          <h1 className={`text-4xl font-extrabold text-${PRIMARY_COLOR}`}>
+            Admin Dashboard
           </h1>
+          <p className="text-gray-500 mt-1">Overview of your operations</p>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* --- Stats Cards (Standard & Professional) --- */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Total Orders */}
           <div
             onClick={() => navigate("/admin/orders")}
-            className="bg-gradient-to-br from-white to-pink-50/30 shadow-lg rounded-2xl p-6 border-2 border-pink-200/40 cursor-pointer hover:shadow-2xl hover:border-pink-300/60 hover:scale-105 transition-all duration-300"
+            className="bg-white shadow-lg rounded-xl p-5 border border-gray-100 cursor-pointer hover:shadow-xl transition-shadow duration-200"
           >
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-gray-600 text-sm font-semibold mb-2">Total Orders</p>
-                <h2 className="text-5xl font-bold bg-gradient-to-r from-pink-600 to-pink-700 bg-clip-text text-transparent">
+                <p className="text-sm font-medium text-gray-500 mb-1">Total Orders</p>
+                <h2 className={`text-3xl font-bold text-${PRIMARY_COLOR}`}>
                   {stats.totalOrders}
                 </h2>
               </div>
-              <div className="bg-gradient-to-br from-pink-500 to-pink-600 p-3 rounded-xl shadow-md">
-                <ShoppingCart className="w-7 h-7 text-white" />
+              <div className={`bg-${PRIMARY_COLOR} p-3 rounded-md shadow-md`}>
+                <ShoppingCart className="w-5 h-5 text-white" />
               </div>
             </div>
           </div>
-
+          
+          {/* Active Customers */}
           <div
             onClick={() => navigate("/admin/customers")}
-            className="bg-gradient-to-br from-white to-blue-50/30 shadow-lg rounded-2xl p-6 border-2 border-blue-200/40 cursor-pointer hover:shadow-2xl hover:border-blue-300/60 hover:scale-105 transition-all duration-300"
+            className="bg-white shadow-lg rounded-xl p-5 border border-gray-100 cursor-pointer hover:shadow-xl transition-shadow duration-200"
           >
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-gray-600 text-sm font-semibold mb-2">Total Customers</p>
-                <h2 className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-blue-700 bg-clip-text text-transparent">
+                <p className="text-sm font-medium text-gray-500 mb-1">Total Customers</p>
+                <h2 className="text-3xl font-bold text-blue-600">
                   {stats.activeCustomers}
                 </h2>
               </div>
-              <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-3 rounded-xl shadow-md">
-                <Users className="w-7 h-7 text-white" />
+              <div className="bg-blue-600 p-3 rounded-md shadow-md">
+                <Users className="w-5 h-5 text-white" />
+              </div>
+            </div>
+          </div>
+          
+          {/* Pending Tasks */}
+          <div
+            onClick={() => navigate("/admin/tasks")} // Assuming a tasks route exists
+            className="bg-white shadow-lg rounded-xl p-5 border border-gray-100 cursor-pointer hover:shadow-xl transition-shadow duration-200"
+          >
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-500 mb-1">Pending Tasks</p>
+                <h2 className="text-3xl font-bold text-red-600">
+                  {stats.pendingTasks}
+                </h2>
+              </div>
+              <div className="bg-red-600 p-3 rounded-md shadow-md">
+                <Clock className="w-5 h-5 text-white" />
               </div>
             </div>
           </div>
 
+          {/* Total Revenue */}
           <div
             onClick={() => navigate("/admin/payments")}
-            className="bg-gradient-to-br from-white to-green-50/30 shadow-lg rounded-2xl p-6 border-2 border-green-200/40 cursor-pointer hover:shadow-2xl hover:border-green-300/60 hover:scale-105 transition-all duration-300"
+            className="bg-white shadow-lg rounded-xl p-5 border border-gray-100 cursor-pointer hover:shadow-xl transition-shadow duration-200"
           >
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-gray-600 text-sm font-semibold mb-2">Total Revenue</p>
-                <h2 className="text-5xl font-bold bg-gradient-to-r from-green-600 to-green-700 bg-clip-text text-transparent">
+                <p className="text-sm font-medium text-gray-500 mb-1">Total Revenue</p>
+                <h2 className="text-3xl font-bold text-green-600">
                   $
                   {stats.revenue.toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0,
                   })}
                 </h2>
               </div>
-              <div className="bg-gradient-to-br from-green-500 to-green-600 p-3 rounded-xl shadow-md">
-                <DollarSign className="w-7 h-7 text-white" />
+              <div className="bg-green-600 p-3 rounded-md shadow-md">
+                <DollarSign className="w-5 h-5 text-white" />
               </div>
             </div>
           </div>
         </div>
 
-        {/* Orders + Quick Actions */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 max-h-65 overflow-hidden">
-          <div className="lg:col-span-2 bg-white/80 rounded-xl shadow-md border border-pink-200/30 p-3 flex flex-col overflow-hidden">
-            <div className="flex justify-between items-center mb-3">
+        {/* --- Orders & Quick Actions Section --- */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Recent Orders Table */}
+          <div className="lg:col-span-2 bg-white rounded-xl shadow-lg border border-gray-100 p-4 flex flex-col">
+            <div className="flex justify-between items-center mb-4 border-b pb-3">
               <div className="flex items-center">
-                <div className="bg-gradient-to-br from-pink-100 to-purple-100 p-1.5 rounded-lg mr-2 border border-pink-200/50">
-                  <Activity className="w-4 h-4 text-pink-700" />
-                </div>
-                <h2 className="text-sm font-bold text-gray-800">All Orders</h2>
+                <Activity className={`w-5 h-5 text-${PRIMARY_COLOR} mr-2`} />
+                <h2 className="text-lg font-bold text-gray-800">Recent Orders</h2>
               </div>
               <button
                 onClick={() => navigate("/admin/orders")}
-                className="flex items-center text-pink-700 hover:text-pink-800 text-xs font-semibold bg-gradient-to-r from-pink-50 to-purple-50 hover:from-pink-100 hover:to-purple-100 px-2 py-1 rounded-lg transition-all duration-300 border border-pink-200/50 hover:border-pink-300/70 shadow-sm"
+                className={`flex items-center text-${PRIMARY_COLOR} hover:text-${HOVER_COLOR} text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors duration-200 border border-${BORDER_COLOR} hover:bg-${ACCENT_COLOR}/50`}
               >
-                <Eye className="w-3 h-3 mr-1" />
+                <Eye className="w-3.5 h-3.5 mr-1" />
                 View All
               </button>
             </div>
 
             {orders.length === 0 ? (
-              <div className="text-center py-4 flex-1 flex flex-col items-center justify-center">
-                <div className="bg-gradient-to-br from-pink-100 to-purple-100 rounded-lg w-12 h-12 mx-auto mb-2 flex items-center justify-center border border-pink-200/50 shadow-md">
-                  <ShoppingCart className="w-6 h-6 text-pink-600" />
-                </div>
-                <p className="text-gray-700 font-semibold text-sm mb-1">
-                  No orders
-                </p>
-                <p className="text-gray-500 text-xs">
-                  Orders will appear here once created
-                </p>
+              <div className="text-center py-10 flex-1 flex flex-col items-center justify-center">
+                <ShoppingCart className="w-8 h-8 text-gray-400 mb-2" />
+                <p className="text-gray-700 font-semibold text-sm mb-1">No recent orders</p>
+                <p className="text-gray-500 text-xs">Create a new order to get started.</p>
               </div>
             ) : (
-              <div className="flex-1 -mx-3 px-3 overflow-hidden">
-                <table className="w-full">
-                  <thead className="sticky top-0 bg-white/95 z-10">
-                    <tr className="border-b border-pink-200/50">
-                      <th className="text-left text-xs font-bold text-gray-700 pb-2">
-                        Order No
-                      </th>
-                      <th className="text-left text-xs font-bold text-gray-700 pb-2">
-                        Customer
-                      </th>
-                      <th className="text-left text-xs font-bold text-gray-700 pb-2">
-                        Status
-                      </th>
+              <div className="flex-1 overflow-auto max-h-[350px]">
+                <table className="w-full table-auto">
+                  <thead>
+                    <tr className="border-b text-left text-gray-600">
+                      <th className="py-2 text-xs font-semibold">Order No</th>
+                      <th className="py-2 text-xs font-semibold">Customer</th>
+                      <th className="py-2 text-xs font-semibold">Expected Date</th>
+                      <th className="py-2 text-xs font-semibold">Status</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {orders.map((order, index) => (
+                    {orders.slice(0, 8).map((order) => ( // Show only top 8 for "Recent"
                       <tr
                         key={order._id}
-                        className="border-b border-pink-100/50 hover:bg-pink-50/30 transition-all"
+                        className="border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer"
+                        onClick={() => navigate(`/admin/orders/${order._id}`)} // Add navigation for detail view
                       >
-                        <td className="py-2 text-xs font-semibold text-gray-800">
-                          {String(index + 1).padStart(3, "0")}
+                        <td className="py-3 text-sm font-medium text-gray-800">
+                          {order.orderId || order._id.slice(-6).toUpperCase()} 
                         </td>
-                        <td className="py-2 text-xs text-gray-600 font-medium">
-                          {order.customer?.name}
+                        <td className="py-3 text-sm text-gray-600">
+                          {order.customer?.name || "N/A"}
                         </td>
-                        <td className="py-2">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-gradient-to-r from-pink-100 to-purple-100 text-pink-800 border border-pink-200/50 shadow-sm">
+                        <td className="py-3 text-xs text-gray-500">
+                            {order.expectedDate ? new Date(order.expectedDate).toLocaleDateString() : 'N/A'}
+                        </td>
+                        <td className="py-3">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize ${getStatusStyle(order.status)}`}>
                             {order.status}
                           </span>
                         </td>
@@ -258,63 +316,58 @@ const AdminManagerDashboard = () => {
             )}
           </div>
 
-          <div className="relative bg-gradient-to-br from-purple-50 via-pink-50 to-white rounded-xl shadow-lg border border-purple-200/40 p-4 flex flex-col overflow-hidden">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-pink-200/30 to-purple-200/30 rounded-full blur-2xl -mr-12 -mt-12"></div>
-            <div className="absolute bottom-0 left-0 w-20 h-20 bg-gradient-to-tr from-purple-200/20 to-pink-200/20 rounded-full blur-xl -ml-10 -mb-10"></div>
-            <div className="relative z-10">
-              <div className="flex items-center mb-4">
-                <div className="bg-gradient-to-br from-purple-500 to-pink-500 p-2 rounded-xl mr-2 shadow-md">
-                  <Plus className="w-4 h-4 text-white" />
-                </div>
-                <h2 className="text-sm font-bold bg-gradient-to-r from-purple-700 to-pink-600 bg-clip-text text-transparent">
-                  Quick Actions
-                </h2>
+          {/* Quick Actions */}
+          <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-4">
+            <div className="mb-4 border-b pb-3">
+              <div className="flex items-center">
+                <Plus className={`w-5 h-5 text-${PRIMARY_COLOR} mr-2`} />
+                <h2 className="text-lg font-bold text-gray-800">Quick Actions</h2>
               </div>
-              <div className="space-y-2.5">
-                <button
-                  onClick={() => setShowAddOrder(true)}
-                  className="relative w-full flex items-center justify-center px-3 py-2.5 bg-gradient-to-r from-pink-500 via-purple-500 to-pink-600 hover:from-pink-600 hover:via-purple-600 hover:to-pink-700 text-white rounded-xl font-bold text-xs transition-all duration-500 shadow-lg hover:shadow-xl transform hover:scale-[1.03]"
-                >
-                  <Plus className="w-3.5 h-3.5 mr-1.5" />
-                  New Order
-                </button>
-                <button className="relative w-full flex items-center justify-center px-3 py-2.5 bg-gradient-to-r from-white to-purple-50/50 hover:from-purple-50 hover:to-pink-50 text-gray-700 hover:text-purple-700 rounded-xl font-bold text-xs transition-all duration-500 border-2 border-purple-300/60 hover:border-purple-400 shadow-md hover:shadow-lg transform hover:scale-[1.03]">
-                  <Package className="w-3.5 h-3.5 mr-1.5" />
-                  Update Inventory
-                </button>
-              </div>
+            </div>
+            <div className="space-y-3">
+              <button
+                onClick={() => setShowAddOrder(true)}
+                className={`w-full flex items-center justify-center px-4 py-3 bg-${PRIMARY_COLOR} hover:bg-${HOVER_COLOR} text-white rounded-lg font-semibold text-sm transition-colors duration-300 shadow-md`}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Create New Order
+              </button>
+              <button
+                onClick={() => navigate("/admin/customers/new")} // Assuming customer creation route
+                className={`w-full flex items-center justify-center px-4 py-3 bg-white hover:bg-gray-50 text-gray-700 rounded-lg font-semibold text-sm transition-colors duration-300 border border-${BORDER_COLOR}`}
+              >
+                <Users className="w-4 h-4 mr-2 text-blue-500" />
+                Add New Customer
+              </button>
+              <button
+                onClick={() => navigate("/admin/inventory")} // Assuming inventory route
+                className={`w-full flex items-center justify-center px-4 py-3 bg-white hover:bg-gray-50 text-gray-700 rounded-lg font-semibold text-sm transition-colors duration-300 border border-${BORDER_COLOR}`}
+              >
+                <Package className="w-4 h-4 mr-2 text-green-500" />
+                Manage Inventory
+              </button>
             </div>
           </div>
         </div>
 
-        {/* Workflow Stats */}
-        <div className="bg-white/80 rounded-xl shadow-md border border-pink-200/40 p-4">
-          <h2 className="text-base font-bold text-gray-800 mb-4">
-            Order Workflow Overview
-          </h2>
-          <div className="flex justify-between items-end gap-2">
-            <WorkflowCard title="Placed" value={workflow.placed} color="bg-pink-500" />
-            <WorkflowCard title="Cutting" value={workflow.cutting} color="bg-yellow-500" />
-            <WorkflowCard title="Tailoring" value={workflow.tailoring} color="bg-blue-500" />
-            <WorkflowCard title="Handworking" value={workflow.handworking} color="bg-purple-500" />
-            <WorkflowCard title="Quality Check" value={workflow.qualityCheck} color="bg-orange-500" />
-            <WorkflowCard title="Ready to Deliver" value={workflow.readyToDeliver} color="bg-green-500" />
+        {/* --- Workflow Stats --- */}
+        <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-4">
+          <div className="flex items-center mb-4 border-b pb-3">
+            <ClipboardList className={`w-5 h-5 text-${PRIMARY_COLOR} mr-2`} />
+            <h2 className="text-lg font-bold text-gray-800">Order Processing Pipeline</h2>
+          </div>
+          <div className="flex justify-between items-start gap-3 flex-wrap">
+            <WorkflowCard title="Placed" value={workflow.placed} color="purple-500" />
+            <WorkflowCard title="Cutting" value={workflow.cutting} color="yellow-500" />
+            <WorkflowCard title="Handwork" value={workflow.handworking} color="pink-500" />
+            <WorkflowCard title="Tailoring" value={workflow.tailoring} color="blue-500" />
+            <WorkflowCard title="Quality Check" value={workflow.qualityCheck} color="orange-500" />
+            <WorkflowCard title="Ready" value={workflow.readyToDeliver} color="green-500" />
           </div>
         </div>
       </div>
     </div>
   );
 };
-
-const WorkflowCard = ({ title, value, color }) => (
-  <div className="flex flex-col items-center">
-    <div
-      className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold ${color} shadow-md mb-2`}
-    >
-      {value}
-    </div>
-    <p className="text-xs text-gray-800 font-semibold mb-1 text-center">{title}</p>
-  </div>
-);
 
 export default AdminManagerDashboard;

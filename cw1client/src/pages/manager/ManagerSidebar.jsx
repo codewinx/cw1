@@ -7,6 +7,9 @@ import {
   Scissors,
   ListChecks,
   Hand,
+  Package,
+  ClipboardList , 
+  DollarSign, 
   Shirt,
 } from "lucide-react";
 import LogoutButton from "../../component/LogoutButton"; // 👈 import your logout button
@@ -14,13 +17,19 @@ import LogoutButton from "../../component/LogoutButton"; // 👈 import your log
 const ManagerSidebar = ({ closeSidebar }) => {
   const menuItems = [
     { icon: BarChart3, label: "Dashboard", path: "/manager/dashboard" },
-    { icon: Users, label: "Task Manager", path: "/manager/task" },
-    { icon: ShoppingCart, label: "In-progress Tasks", path: "/manager/in-progress tasks" },
-    { icon: Scissors, label: "Completed Tasks", path: "/manager/completedtasks" },
-    { icon: Hand, label: "Reassign Tasks", path: "/manager/reassigntasks" },
-    { icon: Shirt, label: "Staff Manager", path: "/manager/staffmanager" },
-    { icon: ListChecks, label: "Order Management", path: "/manager/ordermanagement" },
+    { icon: Users, label: "Staff Management", path: "/manager/staff" },
     { icon: ListChecks, label: "Customers", path: "/manager/customers" },
+    { icon: ShoppingCart, label: "Orders", path: "/manager/orders" },
+    { icon: Package, label: "Service Control", path: "/manager/service-control" },
+    { icon: ClipboardList, label: "Task Manager", path: "/manager/tasks" },
+    { icon: DollarSign, label: "Payments", path: "/manager/payments" },
+
+    // { icon: Users, label: "Task Manager", path: "/manager/task" },
+    // { icon: ShoppingCart, label: "In-progress Tasks", path: "/manager/in-progress tasks" },
+    // { icon: Scissors, label: "Completed Tasks", path: "/manager/completedtasks" },
+    // { icon: Hand, label: "Reassign Tasks", path: "/manager/reassigntasks" },
+    // { icon: Shirt, label: "Staff Manager", path: "/manager/staffmanager" },
+    // { icon: ListChecks, label: "Order Management", path: "/manager/ordermanagement" },
   ];
 
   return (

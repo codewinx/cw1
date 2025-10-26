@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { TrendingUp, Users, Package, DollarSign, ShoppingBag, AlertCircle, Download, Calendar, Filter, Briefcase, Award } from 'lucide-react';
 
-const API_URL = 'http://localhost:5000/api/reports'; // Change to your backend URL
+const API_URL = 'http://localhost:5000/api/reports';
 
 const AdminReports = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -23,7 +23,7 @@ const AdminReports = () => {
   // Fetch data based on active tab
   useEffect(() => {
     fetchData();
-  }, [activeTab, dateRange]);
+  }, [activeTab]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -57,6 +57,7 @@ const AdminReports = () => {
           response = await fetch(`${API_URL}/inventory-report?${params}`);
           json = await response.json();
           if (!response.ok) throw new Error(json.message || 'Failed to fetch inventory data');
+          console.log('Inventory data received:', json.data);
           setInventoryData(json.data);
           break;
         case 'staff':
@@ -100,6 +101,13 @@ const AdminReports = () => {
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
+  };
+
+  // Helper function to ensure category is an array
+  const normalizeCategory = (category) => {
+    if (!category) return [];
+    if (Array.isArray(category)) return category;
+    return [category];
   };
 
   // Dashboard View
@@ -331,43 +339,58 @@ const AdminReports = () => {
       <div className="space-y-6">
         <div className="bg-white p-6 rounded-xl shadow-md">
           <h3 className="text-lg font-semibold mb-4">Best Selling Services</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-3 px-4">Service Name</th>
-                  <th className="text-left py-3 px-4">Category</th>
-                  <th className="text-center py-3 px-4">Units Sold</th>
-                  <th className="text-right py-3 px-4">Revenue</th>
-                </tr>
-              </thead>
-              <tbody>
-                {inventoryData.bestSelling.map((item, index) => (
-                  <tr key={index} className="border-b hover:bg-gray-50">
-                    <td className="py-3 px-4 font-medium">{item.serviceName}</td>
-                    <td className="py-3 px-4">
-                      {item.category.map((cat, i) => (
-                        <span key={i} className="bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs mr-1">
-                          {cat}
-                        </span>
-                      ))}
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">
-                        {item.soldCount}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-right font-semibold text-green-600">
-                      {formatCurrency(item.revenue)}
-                    </td>
+          {inventoryData.bestSelling && inventoryData.bestSelling.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-3 px-4">Service Name</th>
+                    <th className="text-left py-3 px-4">Category</th>
+                    <th className="text-center py-3 px-4">Units Sold</th>
+                    <th className="text-right py-3 px-4">Revenue</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {inventoryData.bestSelling.map((item, index) => {
+                    const categories = normalizeCategory(item.category);
+                    return (
+                      <tr key={index} className="border-b hover:bg-gray-50">
+                        <td className="py-3 px-4 font-medium">{item.serviceName}</td>
+                        <td className="py-3 px-4">
+                          {categories.length > 0 ? (
+                            categories.map((cat, i) => (
+                              <span key={i} className="bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs mr-1">
+                                {cat}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-gray-400 text-xs">No category</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">
+                            {item.soldCount}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-right font-semibold text-green-600">
+                          {formatCurrency(item.revenue)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500 text-lg">No service data available</p>
+              <p className="text-gray-400 text-sm mt-2">Try adjusting your date range or check if orders exist</p>
+            </div>
+          )}
         </div>
 
-        {inventoryData.deadStock.length > 0 && (
+        {inventoryData.deadStock && inventoryData.deadStock.length > 0 && (
           <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-red-500">
             <div className="flex items-center mb-4">
               <AlertCircle className="w-6 h-6 text-red-500 mr-2" />
@@ -383,24 +406,43 @@ const AdminReports = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {inventoryData.deadStock.map((item, index) => (
-                    <tr key={index} className="border-b hover:bg-gray-50">
-                      <td className="py-3 px-4 font-medium">{item.serviceName}</td>
-                      <td className="py-3 px-4">
-                        {item.category.map((cat, i) => (
-                          <span key={i} className="bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs mr-1">
-                            {cat}
-                          </span>
-                        ))}
-                      </td>
-                      <td className="py-3 px-4 text-red-600">{item.lastSold}</td>
-                    </tr>
-                  ))}
+                  {inventoryData.deadStock.map((item, index) => {
+                    const categories = normalizeCategory(item.category);
+                    return (
+                      <tr key={index} className="border-b hover:bg-gray-50">
+                        <td className="py-3 px-4 font-medium">{item.serviceName}</td>
+                        <td className="py-3 px-4">
+                          {categories.length > 0 ? (
+                            categories.map((cat, i) => (
+                              <span key={i} className="bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs mr-1">
+                                {cat}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-gray-400 text-xs">No category</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-red-600">{item.lastSold}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           </div>
         )}
+
+        {/* Debug Info */}
+        <div className="bg-blue-50 p-4 rounded-lg text-sm border border-blue-200">
+          <p className="font-semibold mb-2 text-blue-800">📊 Debug Info:</p>
+          <div className="space-y-1 text-blue-700">
+            <p>• Best Selling Items: {inventoryData?.bestSelling?.length || 0}</p>
+            <p>• Dead Stock Items: {inventoryData?.deadStock?.length || 0}</p>
+            {inventoryData?.bestSelling?.length === 0 && (
+              <p className="text-orange-600 mt-2">⚠️ No data found. Try removing date filters or check if you have orders with services.</p>
+            )}
+          </div>
+        </div>
       </div>
     );
   };
@@ -708,6 +750,17 @@ const AdminReports = () => {
             <Filter className="w-4 h-4 mr-2" />
             Apply Filter
           </button>
+          {(dateRange.startDate || dateRange.endDate) && (
+            <button
+              onClick={() => {
+                setDateRange({ startDate: '', endDate: '' });
+                setTimeout(fetchData, 100);
+              }}
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+            >
+              Clear Filter
+            </button>
+          )}
         </div>
 
         {/* Tabs */}
@@ -717,7 +770,7 @@ const AdminReports = () => {
               { id: 'dashboard', label: '🏠 Dashboard' },
               { id: 'sales', label: '💰 Sales' },
               { id: 'customers', label: '👥 Customers' },
-              { id: 'inventory', label: '📦 Inventory' },
+              { id: 'inventory', label: '📦 Service Controle' },
               { id: 'staff', label: '👔 Staff' },
               { id: 'profit', label: '📈 Profit' },
               { id: 'orders', label: '🛍️ Orders' }
