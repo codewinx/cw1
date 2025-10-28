@@ -213,7 +213,7 @@
 //   );
 // }
 import React, { useEffect, useState } from "react";
-import { getPayments, updatePayment, deletePayment } from "../../api/admin";
+import { getPayments, updatePayment, deletePayment } from "../../api/payment";
 import { Pencil, Trash2, Check, X } from "lucide-react";
 
 export default function AdminManagePayments() {
