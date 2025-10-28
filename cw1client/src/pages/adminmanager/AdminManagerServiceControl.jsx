@@ -4,7 +4,7 @@ import {
   addService,
   updateService,
   deleteService,
-} from "../../api/admin+manager.js";
+} from "../../api/service.js";
 import { Pencil, Trash2, Plus } from "lucide-react";
 
 const categoriesList = ["Stitching", "Handworking", "Saree", "Altering"];

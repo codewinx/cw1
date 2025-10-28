@@ -309,26 +309,3 @@ export const updateOrder = async (id, data) => {
   }
 };
 
-// const API_URL = "http://localhost:5000/api/admin/services";
-export const getServices = async () => {
-  const res = await api.get('/api/admin-manager/services');
-  return res.data;
-};
-
-// Add new service
-export const addService = async (serviceData) => {
-  const res = await api.post('/api/admin-manager/add-service', serviceData);
-  return res.data;
-};
-
-// Update service
-export const updateService = async (id, updatedData) => {
-  const res = await api.put(`/api/admin-manager/service/${id}`, updatedData);
-  return res.data;
-};
-
-// Delete service
-export const deleteService = async (id) => {
-  const res = await api.delete(`/api/admin-manager/service/${id}`);
-  return res.data;
-};
